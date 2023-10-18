@@ -15,10 +15,13 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.EnumSet;
 
 public class ServerUtils implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("ocsudl");
@@ -46,7 +49,7 @@ public class ServerUtils implements ModInitializer {
 							ServerPlayerEntity player = context.getSource().getPlayer();
 
 							currentPlayer = player;
-							startPosition = player.getPos();
+							startPosition = player.getPos().floorAlongAxes(EnumSet.of(Direction.Axis.X, Direction.Axis.Y, Direction.Axis.Z));
 
 							return Command.SINGLE_SUCCESS;
 						})
@@ -58,7 +61,7 @@ public class ServerUtils implements ModInitializer {
 						.executes(context -> {
 							ServerPlayerEntity player = context.getSource().getPlayer();
 
-							endPosition = player.getPos();
+							endPosition = player.getPos().floorAlongAxes(EnumSet.of(Direction.Axis.X, Direction.Axis.Y, Direction.Axis.Z));
 
 							return Command.SINGLE_SUCCESS;
 						})
@@ -69,6 +72,8 @@ public class ServerUtils implements ModInitializer {
 						.requires(source -> source.hasPermissionLevel(4))
 						.executes(context -> {
 							currentPlayer = null;
+							startPosition = null;
+							endPosition = null;
 
 							return Command.SINGLE_SUCCESS;
 						})
