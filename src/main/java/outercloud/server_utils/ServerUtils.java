@@ -6,8 +6,11 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -17,12 +20,10 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -40,6 +41,10 @@ public class ServerUtils implements ModInitializer {
 	private ServerWorld selectWorld;
 	private Vec3d selectBoxStart;
 	private Vec3d selectBoxEnd;
+	private ArrayList<NbtCompound> respawnEntityNbts = new ArrayList<>();
+	private ArrayList<Vec3d> respawnEntityPositions = new ArrayList<>();
+	private ArrayList<ServerWorld> respawnEntityWorlds = new ArrayList<>();
+	private ArrayList<Entity> respawnedEntities = new ArrayList<>();
 
 	private void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
 		dispatcher.register(
@@ -204,8 +209,46 @@ public class ServerUtils implements ModInitializer {
 							return Command.SINGLE_SUCCESS;
 						})
 		);
-	}
 
+		dispatcher.register(
+				CommandManager.literal("respawn")
+						.then(CommandManager.literal("enable").executes(context -> {
+							for(Entity entity : selectedEntities) {
+								if(respawnedEntities.contains(entity)) continue;
+
+								respawnedEntities.add(entity);
+								NbtCompound nbt = new NbtCompound();
+								nbt.putString("id", Registries.ENTITY_TYPE.getId(entity.getType()).toString());
+								entity.writeNbt(nbt);
+								nbt.remove("UUID");
+
+								respawnEntityNbts.add(nbt);
+								respawnEntityPositions.add(entity.getPos());
+								respawnEntityWorlds.add((ServerWorld) entity.getWorld());
+							}
+
+							selectedEntities.clear();
+
+							return Command.SINGLE_SUCCESS;
+						}))
+						.then(CommandManager.literal("disable").executes(context -> {
+							for(Entity entity : selectedEntities) {
+								if(!respawnedEntities.contains(entity)) continue;
+
+								int index = respawnedEntities.indexOf(entity);
+
+								respawnedEntities.remove(index);
+								respawnEntityNbts.remove(index);
+								respawnEntityPositions.remove(index);
+								respawnEntityWorlds.remove(index);
+							}
+
+							selectedEntities.clear();
+
+							return Command.SINGLE_SUCCESS;
+						}))
+		);
+	}
 
 	private void drawParticleLine(ServerWorld world, ParticleEffect particle, Vec3d from, Vec3d to, float density) {
 		Vec3d direction = to.subtract(from).normalize();
@@ -216,41 +259,66 @@ public class ServerUtils implements ModInitializer {
 	}
 
 	private void drawBox(ServerWorld world, ParticleEffect particle, Vec3d from, Vec3d to, float density) {
-		drawParticleLine(world, ParticleTypes.COMPOSTER, from, new Vec3d(to.x, from.y, from.z), density);
-		drawParticleLine(world, ParticleTypes.COMPOSTER, from, new Vec3d(from.x, to.y, from.z), density);
-		drawParticleLine(world, ParticleTypes.COMPOSTER, new Vec3d(to.x, from.y, from.z), new Vec3d(to.x, from.y, to.z), density);
-		drawParticleLine(world, ParticleTypes.COMPOSTER, new Vec3d(from.x, from.y, to.z), new Vec3d(to.x, from.y, to.z), density);
+		drawParticleLine(world, particle, from, new Vec3d(to.x, from.y, from.z), density);
+		drawParticleLine(world, particle, from, new Vec3d(from.x, to.y, from.z), density);
+		drawParticleLine(world, particle, new Vec3d(to.x, from.y, from.z), new Vec3d(to.x, from.y, to.z), density);
+		drawParticleLine(world, particle, new Vec3d(from.x, from.y, to.z), new Vec3d(to.x, from.y, to.z), density);
 
-		drawParticleLine(world, ParticleTypes.COMPOSTER, new Vec3d(from.x, to.y, from.z), new Vec3d(to.x, to.y, from.z), density);
-		drawParticleLine(world, ParticleTypes.COMPOSTER, new Vec3d(from.x, to.y, from.z), new Vec3d(from.x, to.y, to.z), density);
-		drawParticleLine(world, ParticleTypes.COMPOSTER, new Vec3d(to.x, to.y, from.z), new Vec3d(to.x, to.y, to.z), density);
-		drawParticleLine(world, ParticleTypes.COMPOSTER, new Vec3d(from.x, to.y, to.z), new Vec3d(to.x, to.y, to.z), density);
+		drawParticleLine(world, particle, new Vec3d(from.x, to.y, from.z), new Vec3d(to.x, to.y, from.z), density);
+		drawParticleLine(world, particle, new Vec3d(from.x, to.y, from.z), new Vec3d(from.x, to.y, to.z), density);
+		drawParticleLine(world, particle, new Vec3d(to.x, to.y, from.z), new Vec3d(to.x, to.y, to.z), density);
+		drawParticleLine(world, particle, new Vec3d(from.x, to.y, to.z), new Vec3d(to.x, to.y, to.z), density);
 
-		drawParticleLine(world, ParticleTypes.COMPOSTER, from, new Vec3d(from.x, from.y, to.z), density);
-		drawParticleLine(world, ParticleTypes.COMPOSTER, new Vec3d(to.x, from.y, from.z), new Vec3d(to.x, to.y, from.z), density);
-		drawParticleLine(world, ParticleTypes.COMPOSTER, new Vec3d(from.x, from.y, to.z), new Vec3d(from.x, to.y, to.z), density);
-		drawParticleLine(world, ParticleTypes.COMPOSTER, new Vec3d(to.x, from.y, to.z), new Vec3d(to.x, to.y, to.z), density);
+		drawParticleLine(world, particle, from, new Vec3d(from.x, from.y, to.z), density);
+		drawParticleLine(world, particle, new Vec3d(to.x, from.y, from.z), new Vec3d(to.x, to.y, from.z), density);
+		drawParticleLine(world, particle, new Vec3d(from.x, from.y, to.z), new Vec3d(from.x, to.y, to.z), density);
+		drawParticleLine(world, particle, new Vec3d(to.x, from.y, to.z), new Vec3d(to.x, to.y, to.z), density);
 	}
 
+	private int tickCount = 0;
+
 	private void tick(MinecraftServer server) {
-		for(int entityIndex = 0; entityIndex < selectedEntities.size(); entityIndex++) {
-			Entity entity = selectedEntities.get(entityIndex);
+		if(tickCount % 10 == 0) {
+			for(int entityIndex = 0; entityIndex < selectedEntities.size(); entityIndex++) {
+				Entity entity = selectedEntities.get(entityIndex);
 
-			if(!entity.isAlive()) {
-				selectedEntities.remove(entity);
+				if(!entity.isAlive()) {
+					selectedEntities.remove(entity);
 
-				entityIndex--;
+					entityIndex--;
 
-				continue;
+					continue;
+				}
+
+				ServerWorld world = (ServerWorld) entity.getWorld();
+
+				world.spawnParticles(ParticleTypes.SCULK_SOUL, entity.getX(), entity.getBoundingBox().maxY + 0.4, entity.getZ(), 1, 0, 0, 0, 0);
 			}
-
-			ServerWorld world = (ServerWorld) entity.getWorld();
-
-			world.spawnParticles(ParticleTypes.LAVA, entity.getX(), entity.getY(), entity.getZ(), 1, 0, 0, 0, 0);
 		}
 
 		if(selectBoxStart != null && selectBoxEnd != null && selectWorld != null)
 			drawBox(selectWorld, ParticleTypes.COMPOSTER, selectBoxStart, selectBoxEnd, 2f);
+
+		for(int index = 0; index < respawnEntityNbts.size(); index++) {
+			Entity entity = respawnedEntities.get(index);
+			ServerWorld world = respawnEntityWorlds.get(index);
+			Vec3d position = respawnEntityPositions.get(index);
+			NbtCompound nbt = respawnEntityNbts.get(index);
+
+			if(entity.isAlive()) continue;
+
+			Entity newEntity = EntityType.loadEntityWithPassengers(nbt, world, (createdEntity) -> {
+				createdEntity.refreshPositionAndAngles(position.x, position.y, position.z, createdEntity.getYaw(), createdEntity.getPitch());
+
+				return createdEntity;
+			});
+
+			world.spawnNewEntityAndPassengers(newEntity);
+
+			respawnedEntities.set(index, newEntity);
+		}
+
+		tickCount++;
 	}
 
 	private EntityHitResult raycast(Entity entity, Vec3d min, Vec3d max, Box box, Predicate<Entity> predicate, double maxDistance) {
