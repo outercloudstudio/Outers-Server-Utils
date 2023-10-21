@@ -11,9 +11,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.minecraft.command.CommandSource;
-import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
@@ -30,13 +28,13 @@ import net.minecraft.util.math.Vec3d;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 
 public class ServerUtils implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("ocsudl");
-
-	private HashMap<String, RespawnGroup> respawnGroups = new HashMap<>();
 
 	@Override
 	public void onInitialize() {
@@ -54,7 +52,7 @@ public class ServerUtils implements ModInitializer {
 		});
 	}
 
-	private ArrayList<Entity> selectedEntities = new ArrayList<>();
+	private static ArrayList<Entity> selectedEntities = new ArrayList<>();
 	private ServerWorld selectWorld;
 	private Vec3d selectBoxStart;
 	private Vec3d selectBoxEnd;
@@ -247,9 +245,9 @@ public class ServerUtils implements ModInitializer {
 															float delay = FloatArgumentType.getFloat(context, "delay");
 															int amount = IntegerArgumentType.getInteger(context, "amount");
 
-															if(respawnGroups.containsKey(tag)) return -1;
+															if(getPersistentState(context).respawnGroups.containsKey(tag)) return -1;
 
-															respawnGroups.put(tag, new RespawnGroup(tag, delay, amount, context.getSource().getServer()));
+															getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, amount, context.getSource().getServer()));
 
 															return Command.SINGLE_SUCCESS;
 														}))
@@ -257,18 +255,18 @@ public class ServerUtils implements ModInitializer {
 													String tag = StringArgumentType.getString(context, "tag");
 													float delay = FloatArgumentType.getFloat(context, "delay");
 
-													if(respawnGroups.containsKey(tag)) return -1;
+													if(getPersistentState(context).respawnGroups.containsKey(tag)) return -1;
 
-													respawnGroups.put(tag, new RespawnGroup(tag, delay, 1, context.getSource().getServer()));
+													getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, 1, context.getSource().getServer()));
 
 													return Command.SINGLE_SUCCESS;
 												}))
 										.executes(context -> {
 											String tag = StringArgumentType.getString(context, "tag");
 
-											if(respawnGroups.containsKey(tag)) return -1;
+											if(getPersistentState(context).respawnGroups.containsKey(tag)) return -1;
 
-											respawnGroups.put(tag, new RespawnGroup(tag, 0, 1, context.getSource().getServer()));
+											getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, 0, 1, context.getSource().getServer()));
 
 											return Command.SINGLE_SUCCESS;
 										})))
@@ -278,16 +276,16 @@ public class ServerUtils implements ModInitializer {
 										.executes(context -> {
 											String tag = StringArgumentType.getString(context, "tag");
 
-											if(!respawnGroups.containsKey(tag)) return -1;
+											if(!getPersistentState(context).respawnGroups.containsKey(tag)) return -1;
 
-											respawnGroups.remove(tag);
+											getPersistentState(context).respawnGroups.remove(tag);
 
 											return Command.SINGLE_SUCCESS;
 										})))
 						.then(CommandManager.literal("reset")
 								.executes(context -> {
-									for(RespawnGroup respawnGroup : respawnGroups.values()){
-										respawnGroup.reset();
+									for(RespawnGroup respawnGroup : getPersistentState(context).respawnGroups.values()){
+										respawnGroup.reset(context.getSource().getServer());
 									}
 
 									return Command.SINGLE_SUCCESS;
@@ -297,7 +295,7 @@ public class ServerUtils implements ModInitializer {
 									context.getSource().sendFeedback(() -> Text.literal("Current Respawn Groups:"), false);
 
 									int index = 1;
-									for(RespawnGroup respawnGroup : respawnGroups.values()){
+									for(RespawnGroup respawnGroup : getPersistentState(context).respawnGroups.values()){
 										int localIndex = index;
 										context.getSource().sendFeedback(() -> Text.literal(localIndex +". " + respawnGroup.getTag()), false);
 
@@ -307,6 +305,18 @@ public class ServerUtils implements ModInitializer {
 									return Command.SINGLE_SUCCESS;
 								}))
 		);
+	}
+
+	private UtilsPersistentState getPersistentState(CommandContext<ServerCommandSource> context){
+		return UtilsPersistentState.getServerState(context.getSource().getServer());
+	}
+
+	public static void deselect(Entity entity) {
+		if(!selectedEntities.contains(entity)) return;
+
+		selectedEntities.remove(entity);
+
+		entity.removeScoreboardTag("selected");
 	}
 
 	private static Set<String> getTags(CommandContext<ServerCommandSource> context) {
@@ -369,8 +379,8 @@ public class ServerUtils implements ModInitializer {
 			drawBox(selectWorld, ParticleTypes.COMPOSTER, selectBoxStart, selectBoxEnd, 2f);
 
 
-		for(RespawnGroup respawnGroup : respawnGroups.values()) {
-			respawnGroup.tick();
+		for(RespawnGroup respawnGroup : UtilsPersistentState.getServerState(server).respawnGroups.values()) {
+			respawnGroup.tick(server);
 		}
 
 		tickCount++;
