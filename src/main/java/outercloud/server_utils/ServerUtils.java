@@ -9,7 +9,9 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.Entity;
@@ -41,6 +43,15 @@ public class ServerUtils implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> registerCommands(dispatcher));
 
 		ServerTickEvents.END_SERVER_TICK.register(this::tick);
+
+		ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
+			if(!entity.getCommandTags().contains("selected")) return;
+
+			if(!selectedEntities.contains(entity)) return;
+
+			selectedEntities.remove(entity);
+			entity.removeScoreboardTag("selected");
+		});
 	}
 
 	private ArrayList<Entity> selectedEntities = new ArrayList<>();
@@ -83,6 +94,8 @@ public class ServerUtils implements ModInitializer {
 										if(selectedEntities.contains(otherEntity)) continue;
 
 										selectedEntities.add(otherEntity);
+
+										otherEntity.addCommandTag("selected");
 									}
 
 									selectBoxStart = null;
@@ -123,6 +136,8 @@ public class ServerUtils implements ModInitializer {
 
 							selectedEntities.add(entity);
 
+							entity.addCommandTag("selected");
+
 							return Command.SINGLE_SUCCESS;
 						})
 		);
@@ -161,6 +176,8 @@ public class ServerUtils implements ModInitializer {
 										if(!selectedEntities.contains(otherEntity)) continue;
 
 										selectedEntities.remove(otherEntity);
+
+										otherEntity.removeScoreboardTag("selected");
 									}
 
 									selectBoxStart = null;
@@ -181,6 +198,10 @@ public class ServerUtils implements ModInitializer {
 						)
 						.then(CommandManager.literal("all").executes(context -> {
 							if (!context.getSource().isExecutedByPlayer()) return -1;
+
+							for(Entity entity : selectedEntities) {
+								entity.removeScoreboardTag("selected");
+							}
 
 							selectedEntities.clear();
 
@@ -207,6 +228,8 @@ public class ServerUtils implements ModInitializer {
 							if(!selectedEntities.contains(entity)) return 0;
 
 							selectedEntities.remove(entity);
+
+							entity.removeScoreboardTag("selected");
 
 							return Command.SINGLE_SUCCESS;
 						})
