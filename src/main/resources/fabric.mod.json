@@ -3,7 +3,7 @@
 	"id": "ocsudl",
 	"version": "${version}",
 	"name": "Outer's Server Utils",
-	"description": "",
+	"description": "A random collection of server utilities to make certain features easier!",
 	"authors": [
 		"Outer Cloud"
 	],
@@ -13,13 +13,10 @@
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/ocsudl/icon.png",
-	"environment": "*",
+	"environment": "server",
 	"entrypoints": {
 		"main": [
 			"outercloud.server_utils.ServerUtils"
-		],
-		"client": [
-          "outercloud.server_utils.ServerUtilsClient"
 		]
 	},
 	"mixins": [
@@ -31,7 +28,7 @@
 	],
 	"depends": {
 		"fabricloader": ">=0.14.22",
-		"minecraft": "~1.20.2",
+		"minecraft": "~1.20.1",
 		"java": ">=17",
 		"fabric-api": "*"
 	}
