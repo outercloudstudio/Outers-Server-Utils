@@ -2,15 +2,15 @@ package outercloud.server_utils;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -24,11 +24,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.function.Predicate;
 
 public class ServerUtils implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("ocsudl");
+
+	private HashMap<String, RespawnGroup> respawnGroups = new HashMap<>();
 
 	@Override
 	public void onInitialize() {
@@ -41,10 +44,6 @@ public class ServerUtils implements ModInitializer {
 	private ServerWorld selectWorld;
 	private Vec3d selectBoxStart;
 	private Vec3d selectBoxEnd;
-	private ArrayList<NbtCompound> respawnEntityNbts = new ArrayList<>();
-	private ArrayList<Vec3d> respawnEntityPositions = new ArrayList<>();
-	private ArrayList<ServerWorld> respawnEntityWorlds = new ArrayList<>();
-	private ArrayList<Entity> respawnedEntities = new ArrayList<>();
 
 	private void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
 		dispatcher.register(
@@ -212,41 +211,58 @@ public class ServerUtils implements ModInitializer {
 
 		dispatcher.register(
 				CommandManager.literal("respawn")
-						.then(CommandManager.literal("enable").executes(context -> {
-							for(Entity entity : selectedEntities) {
-								if(respawnedEntities.contains(entity)) continue;
+						.then(CommandManager.literal("create")
+								.then(CommandManager.argument("tag", StringArgumentType.word())
+										.then(CommandManager.argument("delay", FloatArgumentType.floatArg(0))
+												.then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
+														.executes(context -> {
+															String tag = StringArgumentType.getString(context, "tag");
+															float delay = FloatArgumentType.getFloat(context, "delay");
+															int amount = IntegerArgumentType.getInteger(context, "amount");
 
-								respawnedEntities.add(entity);
-								NbtCompound nbt = new NbtCompound();
-								nbt.putString("id", Registries.ENTITY_TYPE.getId(entity.getType()).toString());
-								entity.writeNbt(nbt);
-								nbt.remove("UUID");
+															if(respawnGroups.containsKey(tag)) return -1;
 
-								respawnEntityNbts.add(nbt);
-								respawnEntityPositions.add(entity.getPos());
-								respawnEntityWorlds.add((ServerWorld) entity.getWorld());
-							}
+															respawnGroups.put(tag, new RespawnGroup(tag, delay, amount, context.getSource().getServer()));
 
-							selectedEntities.clear();
+															return Command.SINGLE_SUCCESS;
+														}))
+												.executes(context -> {
+													String tag = StringArgumentType.getString(context, "tag");
+													float delay = FloatArgumentType.getFloat(context, "delay");
 
-							return Command.SINGLE_SUCCESS;
-						}))
-						.then(CommandManager.literal("disable").executes(context -> {
-							for(Entity entity : selectedEntities) {
-								if(!respawnedEntities.contains(entity)) continue;
+													if(respawnGroups.containsKey(tag)) return -1;
 
-								int index = respawnedEntities.indexOf(entity);
+													respawnGroups.put(tag, new RespawnGroup(tag, delay, 1, context.getSource().getServer()));
 
-								respawnedEntities.remove(index);
-								respawnEntityNbts.remove(index);
-								respawnEntityPositions.remove(index);
-								respawnEntityWorlds.remove(index);
-							}
+													return Command.SINGLE_SUCCESS;
+												}))
+										.executes(context -> {
+											String tag = StringArgumentType.getString(context, "tag");
 
-							selectedEntities.clear();
+											if(respawnGroups.containsKey(tag)) return -1;
 
-							return Command.SINGLE_SUCCESS;
-						}))
+											respawnGroups.put(tag, new RespawnGroup(tag, 0, 1, context.getSource().getServer()));
+
+											return Command.SINGLE_SUCCESS;
+										})))
+						.then(CommandManager.literal("remove")
+								.then(CommandManager.argument("tag", StringArgumentType.word()).executes(context -> {
+									String tag = StringArgumentType.getString(context, "tag");
+
+									if(!respawnGroups.containsKey(tag)) return -1;
+
+									respawnGroups.remove(tag);
+
+									return Command.SINGLE_SUCCESS;
+								})))
+						.then(CommandManager.literal("reset")
+								.executes(context -> {
+									for(RespawnGroup respawnGroup : respawnGroups.values()){
+										respawnGroup.reset();
+									}
+
+									return Command.SINGLE_SUCCESS;
+								}))
 		);
 	}
 
@@ -299,23 +315,9 @@ public class ServerUtils implements ModInitializer {
 		if(selectBoxStart != null && selectBoxEnd != null && selectWorld != null)
 			drawBox(selectWorld, ParticleTypes.COMPOSTER, selectBoxStart, selectBoxEnd, 2f);
 
-		for(int index = 0; index < respawnEntityNbts.size(); index++) {
-			Entity entity = respawnedEntities.get(index);
-			ServerWorld world = respawnEntityWorlds.get(index);
-			Vec3d position = respawnEntityPositions.get(index);
-			NbtCompound nbt = respawnEntityNbts.get(index);
 
-			if(entity.isAlive()) continue;
-
-			Entity newEntity = EntityType.loadEntityWithPassengers(nbt, world, (createdEntity) -> {
-				createdEntity.refreshPositionAndAngles(position.x, position.y, position.z, createdEntity.getYaw(), createdEntity.getPitch());
-
-				return createdEntity;
-			});
-
-			world.spawnNewEntityAndPassengers(newEntity);
-
-			respawnedEntities.set(index, newEntity);
+		for(RespawnGroup respawnGroup : respawnGroups.values()) {
+			respawnGroup.tick();
 		}
 
 		tickCount++;
