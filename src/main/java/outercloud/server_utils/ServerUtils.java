@@ -1,13 +1,17 @@
 package outercloud.server_utils;
 
+import com.google.common.collect.Sets;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.command.CommandSource;
+import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
@@ -23,9 +27,7 @@ import net.minecraft.util.math.Vec3d;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 
 public class ServerUtils implements ModInitializer {
@@ -213,6 +215,7 @@ public class ServerUtils implements ModInitializer {
 				CommandManager.literal("respawn")
 						.then(CommandManager.literal("create")
 								.then(CommandManager.argument("tag", StringArgumentType.word())
+										.suggests((context, builder) -> CommandSource.suggestMatching(getTags(context), builder))
 										.then(CommandManager.argument("delay", FloatArgumentType.floatArg(0))
 												.then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
 														.executes(context -> {
@@ -246,15 +249,17 @@ public class ServerUtils implements ModInitializer {
 											return Command.SINGLE_SUCCESS;
 										})))
 						.then(CommandManager.literal("remove")
-								.then(CommandManager.argument("tag", StringArgumentType.word()).executes(context -> {
-									String tag = StringArgumentType.getString(context, "tag");
+								.then(CommandManager.argument("tag", StringArgumentType.word())
+										.suggests((context, builder) -> CommandSource.suggestMatching(getTags(context), builder))
+										.executes(context -> {
+											String tag = StringArgumentType.getString(context, "tag");
 
-									if(!respawnGroups.containsKey(tag)) return -1;
+											if(!respawnGroups.containsKey(tag)) return -1;
 
-									respawnGroups.remove(tag);
+											respawnGroups.remove(tag);
 
-									return Command.SINGLE_SUCCESS;
-								})))
+											return Command.SINGLE_SUCCESS;
+										})))
 						.then(CommandManager.literal("reset")
 								.executes(context -> {
 									for(RespawnGroup respawnGroup : respawnGroups.values()){
@@ -264,6 +269,16 @@ public class ServerUtils implements ModInitializer {
 									return Command.SINGLE_SUCCESS;
 								}))
 		);
+	}
+
+	private static Set<String> getTags(CommandContext<ServerCommandSource> context) {
+		Set<String> set = Sets.newHashSet();
+
+        for (Entity entity : context.getSource().getWorld().iterateEntities()) {
+            set.addAll(entity.getCommandTags());
+        }
+
+		return set;
 	}
 
 	private void drawParticleLine(ServerWorld world, ParticleEffect particle, Vec3d from, Vec3d to, float density) {
