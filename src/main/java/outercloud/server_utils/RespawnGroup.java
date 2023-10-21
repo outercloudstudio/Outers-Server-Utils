@@ -115,4 +115,8 @@ public class RespawnGroup {
 
         timer = MathHelper.floor(delay * 20);
     }
+
+    public String getTag() {
+        return tag;
+    }
 }

@@ -20,6 +20,7 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
@@ -264,6 +265,20 @@ public class ServerUtils implements ModInitializer {
 								.executes(context -> {
 									for(RespawnGroup respawnGroup : respawnGroups.values()){
 										respawnGroup.reset();
+									}
+
+									return Command.SINGLE_SUCCESS;
+								}))
+						.then(CommandManager.literal("list")
+								.executes(context -> {
+									context.getSource().sendFeedback(() -> Text.literal("Current Respawn Groups:"), false);
+
+									int index = 1;
+									for(RespawnGroup respawnGroup : respawnGroups.values()){
+										int localIndex = index;
+										context.getSource().sendFeedback(() -> Text.literal(localIndex +". " + respawnGroup.getTag()), false);
+
+										index++;
 									}
 
 									return Command.SINGLE_SUCCESS;
