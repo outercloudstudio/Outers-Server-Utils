@@ -19,6 +19,7 @@ import net.minecraft.world.dimension.DimensionType;
 
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.UUID;
 
 public class RespawnGroup {
     private String tag;
@@ -31,7 +32,7 @@ public class RespawnGroup {
     private ArrayList<Vec3d> positions = new ArrayList<>();
     private ArrayList<NbtCompound> nbts = new ArrayList<>();
 
-    private ArrayList<Entity> spawnedEntities = new ArrayList<>();
+    private ArrayList<UUID> spawnedEntities = new ArrayList<>();
 
     public RespawnGroup(String tag, float delay, int amount, MinecraftServer server) {
         this.tag = tag;
@@ -55,7 +56,7 @@ public class RespawnGroup {
 
                 nbts.add(nbt);
 
-                spawnedEntities.add(entity);
+                spawnedEntities.add(entity.getUuid());
             }
         }
 
@@ -67,11 +68,9 @@ public class RespawnGroup {
     }
 
     public RespawnGroup(String tag, NbtCompound nbt) {
+        this.tag = tag;
         delay = nbt.getFloat("delay");
         amount = nbt.getInt("amount");
-
-        ServerUtils.LOGGER.info(String.valueOf(delay));
-        ServerUtils.LOGGER.info(String.valueOf(amount));
 
         for(NbtElement element : nbt.getList("datas", NbtElement.COMPOUND_TYPE)) {
             NbtCompound spawnDataNbt = (NbtCompound) element;
@@ -79,10 +78,12 @@ public class RespawnGroup {
             positions.add(new Vec3d(spawnDataNbt.getFloat("x"), spawnDataNbt.getFloat("y"), spawnDataNbt.getFloat("z")));
             worlds.add(RegistryKey.of(RegistryKeys.WORLD, new Identifier(spawnDataNbt.getString("world"))));
             nbts.add((NbtCompound) spawnDataNbt.get("data"));
+        }
 
-            ServerUtils.LOGGER.info(String.valueOf(new Vec3d(spawnDataNbt.getFloat("x"), spawnDataNbt.getFloat("y"), spawnDataNbt.getFloat("z"))));
-            ServerUtils.LOGGER.info(String.valueOf(RegistryKey.of(RegistryKeys.WORLD, new Identifier(spawnDataNbt.getString("world")))));
-            ServerUtils.LOGGER.info(String.valueOf(spawnDataNbt.get("data")));
+        for(NbtElement element : nbt.getList("spawnedEntities", NbtElement.COMPOUND_TYPE)) {
+            NbtCompound spawnDataNbt = (NbtCompound) element;
+
+            spawnedEntities.add(UUID.fromString(spawnDataNbt.getString("id")));
         }
     }
 
@@ -109,12 +110,34 @@ public class RespawnGroup {
 
         data.put("datas", spawnDatas);
 
+        NbtList spawnedEntitiesData = new NbtList();
+
+        for(UUID uuid : spawnedEntities){
+            NbtCompound spawnedEntityData = new NbtCompound();
+            spawnedEntityData.putString("id", uuid.toString());
+
+            spawnedEntitiesData.add(spawnedEntityData);
+        }
+
+        data.put("spawnedEntities", spawnedEntitiesData);
+
         nbt.put(tag, data);
+    }
+
+
+    private Entity getEntity(UUID uuid, MinecraftServer server) {
+        for(ServerWorld world : server.getWorlds()) {
+            for(Entity entity : world.iterateEntities()) {
+                if(entity.getUuid().equals(uuid)) return entity;
+            }
+        }
+
+        return null;
     }
 
     public void tick(MinecraftServer server) {
         for(int index = 0; index < spawnedEntities.size(); index++) {
-            Entity entity = spawnedEntities.get(index);
+            Entity entity = getEntity(spawnedEntities.get(index), server);
 
             if(entity != null && entity.isAlive()) continue;
 
@@ -138,7 +161,7 @@ public class RespawnGroup {
 
             world.spawnNewEntityAndPassengers(newEntity);
 
-            spawnedEntities.set(index, newEntity);
+            spawnedEntities.set(index, newEntity.getUuid());
         }
 
         if(timer <= 0) timer = MathHelper.floor(delay * 20);
@@ -146,7 +169,7 @@ public class RespawnGroup {
 
     public void reset(MinecraftServer server) {
         for(int index = 0; index < spawnedEntities.size(); index++) {
-            Entity entity = spawnedEntities.get(index);
+            Entity entity = getEntity(spawnedEntities.get(index), server);
 
             if(entity != null && entity.isAlive()) entity.kill();
 
@@ -166,7 +189,7 @@ public class RespawnGroup {
 
             world.spawnNewEntityAndPassengers(newEntity);
 
-            spawnedEntities.set(index, newEntity);
+            spawnedEntities.set(index, newEntity.getUuid());
         }
 
         timer = MathHelper.floor(delay * 20);
