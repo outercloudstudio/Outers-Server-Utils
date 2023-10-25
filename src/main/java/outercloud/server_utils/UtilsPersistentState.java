@@ -11,8 +11,6 @@ import java.util.HashMap;
 public class UtilsPersistentState extends PersistentState {
     public HashMap<String, RespawnGroup> respawnGroups = new HashMap<>();
 
-    private static final Type<UtilsPersistentState> TYPE = new Type<>(UtilsPersistentState::new, UtilsPersistentState::createFromNbt, null);
-
     @Override
     public NbtCompound writeNbt(NbtCompound nbt) {
         NbtCompound respawnGroupsData = new NbtCompound();
@@ -41,7 +39,7 @@ public class UtilsPersistentState extends PersistentState {
     public static UtilsPersistentState getServerState(MinecraftServer server) {
         PersistentStateManager persistentStateManager = server.getWorld(World.OVERWORLD).getPersistentStateManager();
 
-        UtilsPersistentState state = persistentStateManager.getOrCreate(TYPE, "ocsudl");
+        UtilsPersistentState state = persistentStateManager.getOrCreate(UtilsPersistentState::createFromNbt, UtilsPersistentState::new, "ocsudl");
 
         state.markDirty();
 

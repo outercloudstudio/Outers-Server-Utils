@@ -13,18 +13,14 @@
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/ocsudl/icon.png",
-	"environment": "server",
+	"environment": "*",
 	"entrypoints": {
 		"main": [
 			"outercloud.server_utils.ServerUtils"
 		]
 	},
 	"mixins": [
-		"ocsudl.mixins.json",
-		{
-			"config": "ocsudl.client.mixins.json",
-			"environment": "client"
-		}
+		"ocsudl.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.14.22",
