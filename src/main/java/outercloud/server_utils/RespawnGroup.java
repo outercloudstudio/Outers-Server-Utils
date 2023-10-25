@@ -171,7 +171,7 @@ public class RespawnGroup {
         for(int index = 0; index < spawnedEntities.size(); index++) {
             Entity entity = getEntity(spawnedEntities.get(index), server);
 
-            if(entity != null && entity.isAlive()) entity.kill();
+            if(entity != null && entity.isAlive()) entity.discard();
 
             Random random = new Random();
 
