@@ -63,30 +63,58 @@ public class ServerUtils implements ModInitializer {
 						.requires(source -> source.hasPermissionLevel(4))
 						.then(CommandManager.literal("box")
 								.then(CommandManager.literal("start").executes(context -> {
-									if (!context.getSource().isExecutedByPlayer()) return -1;
+									if (!context.getSource().isExecutedByPlayer()) {
+										context.getSource().sendError(Text.of("Select must be run by a player!"));
+
+										return -1;
+									}
 
 									ServerPlayerEntity player = context.getSource().getPlayer();
 
 									selectBoxStart = player.getPos();
 
+									context.getSource().sendFeedback(() -> Text.of("Set box start!"), false);
+
 									return Command.SINGLE_SUCCESS;
 								}))
 								.then(CommandManager.literal("end").executes(context -> {
-									if (!context.getSource().isExecutedByPlayer()) return -1;
+									if (!context.getSource().isExecutedByPlayer()) {
+										context.getSource().sendError(Text.of("Select must be run by a player!"));
+
+										return -1;
+									}
 
 									ServerPlayerEntity player = context.getSource().getPlayer();
 
 									selectBoxEnd = player.getEyePos();
 									selectWorld = player.getServerWorld();
 
+									context.getSource().sendFeedback(() -> Text.of("Set box end!"), false);
+
 									return Command.SINGLE_SUCCESS;
 								}))
 								.then(CommandManager.literal("apply").executes(context -> {
-									if (!context.getSource().isExecutedByPlayer()) return -1;
+									if (!context.getSource().isExecutedByPlayer()) {
+										context.getSource().sendError(Text.of("Select must be run by a player!"));
 
-									if(selectBoxStart == null) return -1;
-									if(selectBoxEnd == null) return -1;
-									if(selectWorld == null) return -1;
+										return -1;
+									}
+
+									if(selectBoxStart == null) {
+										context.getSource().sendError(Text.of("You must specify a box start first!"));
+
+										return -1;
+									}
+									if(selectBoxEnd == null) {
+										context.getSource().sendError(Text.of("You must specify a box end first!"));
+
+										return -1;
+									}
+									if(selectWorld == null) {
+										context.getSource().sendError(Text.of("You must specify a box world first!"));
+
+										return -1;
+									}
 
 									for(Entity otherEntity : selectWorld.getOtherEntities(null, new Box(selectBoxStart, selectBoxEnd))) {
 										if(selectedEntities.contains(otherEntity)) continue;
@@ -100,20 +128,32 @@ public class ServerUtils implements ModInitializer {
 									selectBoxEnd = null;
 									selectWorld = null;
 
+									context.getSource().sendFeedback(() -> Text.of("Selected entities in box!"), false);
+
 									return Command.SINGLE_SUCCESS;
 								}))
 								.then(CommandManager.literal("cancel").executes(context -> {
-									if (!context.getSource().isExecutedByPlayer()) return -1;
+									if (!context.getSource().isExecutedByPlayer()) {
+										context.getSource().sendError(Text.of("Select must be run by a player!"));
+
+										return -1;
+									}
 
 									selectBoxStart = null;
 									selectBoxEnd = null;
 									selectWorld = null;
 
+									context.getSource().sendFeedback(() -> Text.of("Cancelled box!"), false);
+
 									return Command.SINGLE_SUCCESS;
 								}))
 						)
 						.executes(context -> {
-							if (!context.getSource().isExecutedByPlayer()) return -1;
+							if (!context.getSource().isExecutedByPlayer()) {
+								context.getSource().sendError(Text.of("Select must be run by a player!"));
+
+								return -1;
+							}
 
 							ServerPlayerEntity player = context.getSource().getPlayer();
 
@@ -124,17 +164,31 @@ public class ServerUtils implements ModInitializer {
 							Box box = Box.from(start.lerp(end, 0.5f)).expand(10f);
 							EntityHitResult result = raycast(player, start, end, box, entity -> true, 20f);
 
-							if (result == null) return 0;
+							if (result == null) {
+								context.getSource().sendError(Text.of("No entity was in front of the player!"));
 
-							if (result.getType() != HitResult.Type.ENTITY) return -1;
+								return -1;
+							}
+
+							if (result.getType() != HitResult.Type.ENTITY) {
+								context.getSource().sendError(Text.of("No entity was in front of the player!"));
+
+								return -1;
+							}
 
 							Entity entity = (result).getEntity();
 
-							if(selectedEntities.contains(entity)) return 0;
+							if(selectedEntities.contains(entity)) {
+								context.getSource().sendFeedback(() -> Text.of("Entity has already been selected."), false);
+
+								return -1;
+							}
 
 							selectedEntities.add(entity);
 
 							entity.addCommandTag("selected");
+
+							context.getSource().sendFeedback(() -> Text.of("Selected entity!"), false);
 
 							return Command.SINGLE_SUCCESS;
 						})
@@ -145,30 +199,58 @@ public class ServerUtils implements ModInitializer {
 						.requires(source -> source.hasPermissionLevel(4))
 						.then(CommandManager.literal("box")
 								.then(CommandManager.literal("start").executes(context -> {
-									if (!context.getSource().isExecutedByPlayer()) return -1;
+									if (!context.getSource().isExecutedByPlayer()) {
+										context.getSource().sendError(Text.of("Deselect must be run by a player!"));
+
+										return -1;
+									}
 
 									ServerPlayerEntity player = context.getSource().getPlayer();
 
 									selectBoxStart = player.getPos();
 
+									context.getSource().sendFeedback(() -> Text.of("Set start of box!"), false);
+
 									return Command.SINGLE_SUCCESS;
 								}))
 								.then(CommandManager.literal("end").executes(context -> {
-									if (!context.getSource().isExecutedByPlayer()) return -1;
+									if (!context.getSource().isExecutedByPlayer()) {
+										context.getSource().sendError(Text.of("Deselect must be run by a player!"));
+
+										return -1;
+									}
 
 									ServerPlayerEntity player = context.getSource().getPlayer();
 
 									selectBoxEnd = player.getEyePos();
 									selectWorld = player.getServerWorld();
 
+									context.getSource().sendFeedback(() -> Text.of("Set end of box!"), false);
+
 									return Command.SINGLE_SUCCESS;
 								}))
 								.then(CommandManager.literal("apply").executes(context -> {
-									if (!context.getSource().isExecutedByPlayer()) return -1;
+									if (!context.getSource().isExecutedByPlayer()) {
+										context.getSource().sendError(Text.of("Deselect must be run by a player!"));
 
-									if(selectBoxStart == null) return -1;
-									if(selectBoxEnd == null) return -1;
-									if(selectWorld == null) return -1;
+										return -1;
+									}
+
+									if(selectBoxStart == null) {
+										context.getSource().sendError(Text.of("You must specify a box start first!"));
+
+										return -1;
+									}
+									if(selectBoxEnd == null) {
+										context.getSource().sendError(Text.of("You must specify a box end first!"));
+
+										return -1;
+									}
+									if(selectWorld == null) {
+										context.getSource().sendError(Text.of("You must specify a box world first!"));
+
+										return -1;
+									}
 
 									for(Entity otherEntity : selectWorld.getOtherEntities(null, new Box(selectBoxStart, selectBoxEnd))) {
 										if(!selectedEntities.contains(otherEntity)) continue;
@@ -182,20 +264,32 @@ public class ServerUtils implements ModInitializer {
 									selectBoxEnd = null;
 									selectWorld = null;
 
+									context.getSource().sendFeedback(() -> Text.of("Deselected entities in box!"), false);
+
 									return Command.SINGLE_SUCCESS;
 								}))
 								.then(CommandManager.literal("cancel").executes(context -> {
-									if (!context.getSource().isExecutedByPlayer()) return -1;
+									if (!context.getSource().isExecutedByPlayer()) {
+										context.getSource().sendError(Text.of("Deselect must be run by a player!"));
+
+										return -1;
+									}
 
 									selectBoxStart = null;
 									selectBoxEnd = null;
 									selectWorld = null;
 
+									context.getSource().sendFeedback(() -> Text.of("Cancelled box!"), false);
+
 									return Command.SINGLE_SUCCESS;
 								}))
 						)
 						.then(CommandManager.literal("all").executes(context -> {
-							if (!context.getSource().isExecutedByPlayer()) return -1;
+							if (!context.getSource().isExecutedByPlayer()) {
+								context.getSource().sendError(Text.of("Deselect must be run by a player!"));
+
+								return -1;
+							}
 
 							for(Entity entity : selectedEntities) {
 								entity.removeScoreboardTag("selected");
@@ -203,11 +297,16 @@ public class ServerUtils implements ModInitializer {
 
 							selectedEntities.clear();
 
+							context.getSource().sendFeedback(() -> Text.of("Deselected all entities!"), false);
+
 							return Command.SINGLE_SUCCESS;
 						}))
 						.executes(context -> {
-							if (!context.getSource().isExecutedByPlayer()) return -1;
+							if (!context.getSource().isExecutedByPlayer()) {
+								context.getSource().sendError(Text.of("Deselect must be run by a player!"));
 
+								return -1;
+							}
 							ServerPlayerEntity player = context.getSource().getPlayer();
 
 							Vec3d start = player.getCameraPosVec(1);
@@ -217,17 +316,31 @@ public class ServerUtils implements ModInitializer {
 							Box box = Box.from(start.lerp(end, 0.5f)).expand(10f);
 							EntityHitResult result = raycast(player, start, end, box, entity -> true, 20f);
 
-							if (result == null) return 0;
+							if (result == null) {
+								context.getSource().sendError(Text.of("No entity was in front of the player!"));
 
-							if (result.getType() != HitResult.Type.ENTITY) return -1;
+								return -1;
+							}
+
+							if (result.getType() != HitResult.Type.ENTITY) {
+								context.getSource().sendError(Text.of("No entity was in front of the player!"));
+
+								return -1;
+							}
 
 							Entity entity = result.getEntity();
 
-							if(!selectedEntities.contains(entity)) return 0;
+							if(!selectedEntities.contains(entity)) {
+								context.getSource().sendFeedback(() -> Text.of("Entity is not already selected."), false);
+
+								return -1;
+							}
 
 							selectedEntities.remove(entity);
 
 							entity.removeScoreboardTag("selected");
+
+							context.getSource().sendFeedback(() -> Text.of("Deselected entity!"), false);
 
 							return Command.SINGLE_SUCCESS;
 						})
@@ -245,9 +358,15 @@ public class ServerUtils implements ModInitializer {
 															float delay = FloatArgumentType.getFloat(context, "delay");
 															int amount = IntegerArgumentType.getInteger(context, "amount");
 
-															if(getPersistentState(context).respawnGroups.containsKey(tag)) return -1;
+															if(getPersistentState(context).respawnGroups.containsKey(tag)) {
+																context.getSource().sendError(Text.of("A respawn group with that tag already exists!"));
+
+																return -1;
+															}
 
 															getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, amount, context.getSource().getServer()));
+
+															context.getSource().sendFeedback(() -> Text.of("Created respawn group!"), false);
 
 															return Command.SINGLE_SUCCESS;
 														}))
@@ -255,18 +374,82 @@ public class ServerUtils implements ModInitializer {
 													String tag = StringArgumentType.getString(context, "tag");
 													float delay = FloatArgumentType.getFloat(context, "delay");
 
-													if(getPersistentState(context).respawnGroups.containsKey(tag)) return -1;
+													if(getPersistentState(context).respawnGroups.containsKey(tag)) {
+														context.getSource().sendError(Text.of("A respawn group with that tag already exists!"));
+
+														return -1;
+													}
 
 													getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, 1, context.getSource().getServer()));
+
+													context.getSource().sendFeedback(() -> Text.of("Created respawn group!"), false);
 
 													return Command.SINGLE_SUCCESS;
 												}))
 										.executes(context -> {
 											String tag = StringArgumentType.getString(context, "tag");
 
-											if(getPersistentState(context).respawnGroups.containsKey(tag)) return -1;
+											if(getPersistentState(context).respawnGroups.containsKey(tag)) {
+												context.getSource().sendError(Text.of("A respawn group with that tag already exists!"));
+
+												return -1;
+											}
 
 											getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, 0, 1, context.getSource().getServer()));
+
+											context.getSource().sendFeedback(() -> Text.of("Created respawn group!"), false);
+
+											return Command.SINGLE_SUCCESS;
+										})))
+						.then(CommandManager.literal("edit")
+								.then(CommandManager.argument("tag", StringArgumentType.word())
+										.suggests((context, builder) -> CommandSource.suggestMatching(getTags(context), builder))
+										.then(CommandManager.argument("delay", FloatArgumentType.floatArg(0))
+												.then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
+														.executes(context -> {
+															String tag = StringArgumentType.getString(context, "tag");
+															float delay = FloatArgumentType.getFloat(context, "delay");
+															int amount = IntegerArgumentType.getInteger(context, "amount");
+
+															if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
+																context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
+
+																return -1;
+															}
+
+															getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, amount, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
+
+															context.getSource().sendFeedback(() -> Text.of("Edited respawn group!"), false);
+
+															return Command.SINGLE_SUCCESS;
+														}))
+												.executes(context -> {
+													String tag = StringArgumentType.getString(context, "tag");
+													float delay = FloatArgumentType.getFloat(context, "delay");
+
+													if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
+														context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
+
+														return -1;
+													}
+													getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, 1, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
+
+													context.getSource().sendFeedback(() -> Text.of("Edited respawn group!"), false);
+
+													return Command.SINGLE_SUCCESS;
+												}))
+										.executes(context -> {
+											String tag = StringArgumentType.getString(context, "tag");
+
+											if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
+												context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
+
+												return -1;
+											}
+
+											getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, 0, 1, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
+
+											context.getSource().sendFeedback(() -> Text.of("Edited respawn group!"), false);
 
 											return Command.SINGLE_SUCCESS;
 										})))
@@ -276,9 +459,15 @@ public class ServerUtils implements ModInitializer {
 										.executes(context -> {
 											String tag = StringArgumentType.getString(context, "tag");
 
-											if(!getPersistentState(context).respawnGroups.containsKey(tag)) return -1;
+											if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
+												context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
+
+												return -1;
+											}
 
 											getPersistentState(context).respawnGroups.remove(tag);
+
+											context.getSource().sendFeedback(() -> Text.of("Removed respawn group!"), false);
 
 											return Command.SINGLE_SUCCESS;
 										})))
@@ -287,6 +476,8 @@ public class ServerUtils implements ModInitializer {
 									for(RespawnGroup respawnGroup : getPersistentState(context).respawnGroups.values()){
 										respawnGroup.reset(context.getSource().getServer());
 									}
+
+									context.getSource().sendFeedback(() -> Text.of("Reset all respawn groups!"), false);
 
 									return Command.SINGLE_SUCCESS;
 								}))

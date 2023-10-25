@@ -6,7 +6,6 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
@@ -15,7 +14,6 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
-import net.minecraft.world.dimension.DimensionType;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -33,6 +31,25 @@ public class RespawnGroup {
     private ArrayList<NbtCompound> nbts = new ArrayList<>();
 
     private ArrayList<UUID> spawnedEntities = new ArrayList<>();
+
+    public RespawnGroup(String tag, float delay, int amount, MinecraftServer server, RespawnGroup source) {
+        source.cleanup(server);
+
+        this.tag = tag;
+        this.delay = delay;
+        this.amount = amount;
+        this.timer = MathHelper.floor(delay * 20);
+
+        this.worlds = source.worlds;
+        this.positions = source.positions;
+        this.nbts = source.nbts;
+
+        if(nbts.isEmpty()) return;
+
+        while(spawnedEntities.size() < amount) {
+            spawnedEntities.add(null);
+        }
+    }
 
     public RespawnGroup(String tag, float delay, int amount, MinecraftServer server) {
         this.tag = tag;
@@ -193,6 +210,14 @@ public class RespawnGroup {
         }
 
         timer = MathHelper.floor(delay * 20);
+    }
+
+    public void cleanup(MinecraftServer server) {
+        for (UUID spawnedEntity : spawnedEntities) {
+            Entity entity = getEntity(spawnedEntity, server);
+
+            if (entity != null && entity.isAlive()) entity.discard();
+        }
     }
 
     public String getTag() {
