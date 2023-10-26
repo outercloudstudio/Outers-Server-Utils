@@ -1,5 +1,5 @@
-# Basic Npcs
-The purpose of this mob is to be able to create respawnable NPC groups or individuals.
+# Simple Npcs
+The purpose of this mob is to be able to create respawnable NPC groups or individuals. Simple NPCs is completely server sided!
 
 ## Idea
 1. Summon entity and modify it to desired effect
