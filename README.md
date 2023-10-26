@@ -1,4 +1,4 @@
-# Simple Npcs
+# Simple NPCs
 The purpose of this mob is to be able to create respawnable NPC groups or individuals. Simple NPCs is completely server sided!
 
 ## Idea
@@ -7,7 +7,7 @@ The purpose of this mob is to be able to create respawnable NPC groups or indivi
 3. Create spawn group
 4. Entities will now respawn
 
-## Techical
+## Technical
 NPCs are saved using NBT so anything that works with NBT should work with this mod.
 
 Groups are based off of tags so the `/tag` command can be used to completely skip using the `/select` command.
