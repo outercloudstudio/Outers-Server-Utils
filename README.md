@@ -36,3 +36,9 @@ By default, this command targets the entity in front of the player, otherwise yo
 `/respawn list` lists out the names of the currently existing respawn groups
 
 ## Tutorial
+1. Find an entity. You can spawn one using `/summon` or using a spawn egg.
+2. Run `/select` while looking directly at the entity. You should see a glowing soul above the entity after selecting it, otherwise it isn't selected.
+3. Run the command `/tag @e[tag=selected] add my_respawn_group` You should change `my_respawn_group` to a different name you will rememeber.
+4. Run `/respawn my_respawn_group` or change `my_respawn_group` to the tag name you put in earlier.
+
+You should now see the mob will respawn when killed!
