@@ -42,3 +42,10 @@ By default, this command targets the entity in front of the player, otherwise yo
 4. Run `/respawn my_respawn_group` or change `my_respawn_group` to the tag name you put in earlier.
 
 You should now see the mob will respawn when killed!
+
+# Download
+Modrinth:
+https://modrinth.com/mod/blue-cloud-simple-npcs
+
+Curseforge:
+https://legacy.curseforge.com/minecraft/mc-mods/bluecloud-simple-npcs
