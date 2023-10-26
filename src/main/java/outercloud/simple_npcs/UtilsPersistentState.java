@@ -1,4 +1,4 @@
-package outercloud.server_utils;
+package outercloud.simple_npcs;
 
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.MinecraftServer;

@@ -1,4 +1,4 @@
-package outercloud.server_utils;
+package outercloud.simple_npcs;
 
 import com.google.common.collect.Sets;
 import com.mojang.brigadier.Command;
@@ -33,8 +33,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class ServerUtils implements ModInitializer {
-    public static final Logger LOGGER = LoggerFactory.getLogger("ocsudl");
+public class SimpleNpcs implements ModInitializer {
+    public static final Logger LOGGER = LoggerFactory.getLogger("simple_npcs");
 
 	@Override
 	public void onInitialize() {
@@ -472,7 +472,7 @@ public class ServerUtils implements ModInitializer {
 											return Command.SINGLE_SUCCESS;
 										})))
 						.then(CommandManager.literal("reset")
-								.executes(context -> {
+								.then(CommandManager.literal("all").executes(context -> {
 									for(RespawnGroup respawnGroup : getPersistentState(context).respawnGroups.values()){
 										respawnGroup.reset(context.getSource().getServer());
 									}
@@ -480,7 +480,24 @@ public class ServerUtils implements ModInitializer {
 									context.getSource().sendFeedback(() -> Text.of("Reset all respawn groups!"), false);
 
 									return Command.SINGLE_SUCCESS;
-								}))
+								})))
+								.then(CommandManager.argument("tag", StringArgumentType.word())
+										.suggests((context, builder) -> CommandSource.suggestMatching(getTags(context), builder))
+										.executes(context -> {
+											String tag = StringArgumentType.getString(context, "tag");
+
+											if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
+												context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
+
+												return -1;
+											}
+
+											getPersistentState(context).respawnGroups.get(tag).reset(context.getSource().getServer());
+
+											context.getSource().sendFeedback(() -> Text.of("Reset respawn group!"), false);
+
+											return Command.SINGLE_SUCCESS;
+										}))
 						.then(CommandManager.literal("list")
 								.executes(context -> {
 									context.getSource().sendFeedback(() -> Text.literal("Current Respawn Groups:"), false);

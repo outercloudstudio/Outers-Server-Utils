@@ -1,4 +1,4 @@
-package outercloud.server_utils;
+package outercloud.simple_npcs;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -61,7 +61,7 @@ public class RespawnGroup {
             for(Entity entity : world.iterateEntities()) {
                 if(!entity.getCommandTags().contains(this.tag)) continue;
 
-                ServerUtils.deselect(entity);
+                SimpleNpcs.deselect(entity);
 
                 worlds.add(world.getRegistryKey());
                 positions.add(entity.getPos());
