@@ -20,9 +20,10 @@ import java.util.Random;
 import java.util.UUID;
 
 public class RespawnGroup {
-    private String tag;
-    private float delay;
-    private int amount;
+    private String tag = "none";
+    private float delay = 0;
+    private int amount = 0;
+    private boolean random = true;
 
     private int timer;
 
@@ -32,11 +33,12 @@ public class RespawnGroup {
 
     private ArrayList<UUID> spawnedEntities = new ArrayList<>();
 
-    public RespawnGroup(String tag, float delay, int amount, MinecraftServer server, RespawnGroup source) {
+    public RespawnGroup(String tag, float delay, boolean random, int amount, MinecraftServer server, RespawnGroup source) {
         source.cleanup(server);
 
         this.tag = tag;
         this.delay = delay;
+        this.random = random;
         this.amount = amount;
         this.timer = MathHelper.floor(delay * 20);
 
@@ -44,16 +46,25 @@ public class RespawnGroup {
         this.positions = source.positions;
         this.nbts = source.nbts;
 
+        this.spawnedEntities = new ArrayList<>();
+
+        for(int i = 0; i < source.spawnedEntities.size(); i++) {
+            spawnedEntities.add(null);
+        }
+
         if(nbts.isEmpty()) return;
 
         while(spawnedEntities.size() < amount) {
             spawnedEntities.add(null);
         }
+
+        reset(server);
     }
 
-    public RespawnGroup(String tag, float delay, int amount, MinecraftServer server) {
+    public RespawnGroup(String tag, float delay, boolean random, int amount, MinecraftServer server) {
         this.tag = tag;
         this.delay = delay;
+        this.random = random;
         this.amount = amount;
         this.timer = MathHelper.floor(delay * 20);
 
@@ -87,7 +98,9 @@ public class RespawnGroup {
     public RespawnGroup(String tag, NbtCompound nbt) {
         this.tag = tag;
         delay = nbt.getFloat("delay");
+        if(nbt.getKeys().contains("random")) random = nbt.getBoolean("random");
         amount = nbt.getInt("amount");
+
 
         for(NbtElement element : nbt.getList("datas", NbtElement.COMPOUND_TYPE)) {
             NbtCompound spawnDataNbt = (NbtCompound) element;
@@ -108,6 +121,7 @@ public class RespawnGroup {
         NbtCompound data = new NbtCompound();
 
         data.putFloat("delay", delay);
+        data.putBoolean("random", random);
         data.putInt("amount", amount);
 
         NbtList spawnDatas = new NbtList();
@@ -162,19 +176,23 @@ public class RespawnGroup {
 
             if(timer > 0) break;
 
-            Random random = new Random();
+            Random randomGenerator = new Random();
 
-            int randomSpawnDataIndex = random.nextInt(nbts.size());
+            int spawnDataIndex = index;
 
-            ServerWorld world = server.getWorld(worlds.get(randomSpawnDataIndex));
-            Vec3d position = positions.get(randomSpawnDataIndex);
-            NbtCompound nbt = nbts.get(randomSpawnDataIndex);
+            if(random || index >= nbts.size()) spawnDataIndex = randomGenerator.nextInt(nbts.size());
+
+            ServerWorld world = server.getWorld(worlds.get(spawnDataIndex));
+            Vec3d position = positions.get(spawnDataIndex);
+            NbtCompound nbt = nbts.get(spawnDataIndex);
 
             Entity newEntity = EntityType.loadEntityWithPassengers(nbt, world, (createdEntity) -> {
                 createdEntity.refreshPositionAndAngles(position.x, position.y, position.z, createdEntity.getYaw(), createdEntity.getPitch());
 
                 return createdEntity;
             });
+
+            if(newEntity == null) continue;
 
             world.spawnNewEntityAndPassengers(newEntity);
 
@@ -190,13 +208,15 @@ public class RespawnGroup {
 
             if(entity != null && entity.isAlive()) entity.discard();
 
-            Random random = new Random();
+            Random randomGenerator = new Random();
 
-            int randomSpawnDataIndex = random.nextInt(nbts.size());
+            int spawnDataIndex = index;
 
-            ServerWorld world = server.getWorld(worlds.get(randomSpawnDataIndex));
-            Vec3d position = positions.get(randomSpawnDataIndex);
-            NbtCompound nbt = nbts.get(randomSpawnDataIndex);
+            if(random || index >= nbts.size()) spawnDataIndex = randomGenerator.nextInt(nbts.size());
+
+            ServerWorld world = server.getWorld(worlds.get(spawnDataIndex));
+            Vec3d position = positions.get(spawnDataIndex);
+            NbtCompound nbt = nbts.get(spawnDataIndex);
 
             Entity newEntity = EntityType.loadEntityWithPassengers(nbt, world, (createdEntity) -> {
                 createdEntity.refreshPositionAndAngles(position.x, position.y, position.z, createdEntity.getYaw(), createdEntity.getPitch());

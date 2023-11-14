@@ -1,26 +1,29 @@
 {
 	"schemaVersion": 1,
-	"id": "ocsudl",
+	"id": "simple_npcs",
 	"version": "${version}",
-	"name": "Outer's Server Utils",
-	"description": "A random collection of server utilities to make certain features easier!",
+	"name": "BlueCloud Simple NPCs",
+	"description": "A mod that helps making basic NPCs that respawn!",
 	"authors": [
 		"Outer Cloud"
 	],
+	"contributors": [
+		"Blue Tyler"
+	],
 	"contact": {
-		"homepage": "https://github.com/outercloudstudio/Outers-Server-Utils",
-		"sources": "https://github.com/outercloudstudio/Outers-Server-Utils"
+		"homepage": "https://github.com/outercloudstudio/Simple-Npcs",
+		"sources": "https://github.com/outercloudstudio/Simple-Npcs"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/ocsudl/icon.png",
+	"icon": "assets/simple_npcs/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"outercloud.server_utils.ServerUtils"
+			"outercloud.simple_npcs.SimpleNpcs"
 		]
 	},
 	"mixins": [
-		"ocsudl.mixins.json"
+		"simple_npcs.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.14.22",
