@@ -27,13 +27,19 @@ By default, this command targets the entity in front of the player, otherwise yo
 
 `/respawn` allows the creation, deletion, and modification of entity respawn groups.
 
-`/respawn create` allows you to specify a tag. All entities with that tag will be assigned to the respawn group. You can specify the delay in seconds between killing an entity before it respawns, and the max amount of entities that will be spawned at any one time.
+`/respawn create` allows you to specify a tag. All entities with that tag will be assigned to the respawn group. You can specify the delay in seconds between killing an entity before it respawns, and the max amount of entities that will be spawned at any one time. You can also specify if groups will randomly pick from the pool or always respawn the same mobs.
 
 `/respawn remove` lets you remove the specified respawn group.
 
 `/respawn edit` lets you modify the delay and amount of entities in the specified respawn group.
 
 `/respawn list` lists out the names of the currently existing respawn groups
+
+`/respawn reset` respawns all the entities in a respawn group, or all respawn groups without dropping any loot
+
+`/respawn freeze` prevents entities in a respawn group or all respawn groups from spawning.
+
+`/respawn freeze` unfreezes all or a specific respawn group.
 
 ## Tutorial
 1. Find an entity. You can spawn one using `/summon` or using a spawn egg.

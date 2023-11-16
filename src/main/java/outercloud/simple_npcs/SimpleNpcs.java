@@ -591,7 +591,66 @@ public class SimpleNpcs implements ModInitializer {
 									}
 
 									return Command.SINGLE_SUCCESS;
+								})
+						)
+						.then(CommandManager.literal("freeze")
+								.then(CommandManager.literal("all").executes(context -> {
+									for(RespawnGroup respawnGroup : getPersistentState(context).respawnGroups.values()){
+										respawnGroup.freeze();
+									}
+
+									context.getSource().sendFeedback(() -> Text.of("Froze all respawn groups!"), false);
+
+									return Command.SINGLE_SUCCESS;
 								}))
+								.then(CommandManager.argument("tag", StringArgumentType.word())
+										.suggests((context, builder) -> CommandSource.suggestMatching(getPersistentState(context).respawnGroups.keySet(), builder))
+										.executes(context -> {
+											String tag = StringArgumentType.getString(context, "tag");
+
+											if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
+												context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
+
+												return -1;
+											}
+
+											getPersistentState(context).respawnGroups.get(tag).freeze();
+
+											context.getSource().sendFeedback(() -> Text.of("Froze respawn group!"), false);
+
+											return Command.SINGLE_SUCCESS;
+										})
+								)
+						)
+						.then(CommandManager.literal("unfreeze")
+								.then(CommandManager.literal("all").executes(context -> {
+									for(RespawnGroup respawnGroup : getPersistentState(context).respawnGroups.values()){
+										respawnGroup.freeze();
+									}
+
+									context.getSource().sendFeedback(() -> Text.of("Unfroze all respawn groups!"), false);
+
+									return Command.SINGLE_SUCCESS;
+								}))
+								.then(CommandManager.argument("tag", StringArgumentType.word())
+										.suggests((context, builder) -> CommandSource.suggestMatching(getPersistentState(context).respawnGroups.keySet(), builder))
+										.executes(context -> {
+											String tag = StringArgumentType.getString(context, "tag");
+
+											if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
+												context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
+
+												return -1;
+											}
+
+											getPersistentState(context).respawnGroups.get(tag).freeze();
+
+											context.getSource().sendFeedback(() -> Text.of("Unfroze respawn group!"), false);
+
+											return Command.SINGLE_SUCCESS;
+										})
+								)
+						)
 		);
 	}
 

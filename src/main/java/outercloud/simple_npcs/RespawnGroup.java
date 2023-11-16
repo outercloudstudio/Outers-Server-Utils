@@ -24,6 +24,7 @@ public class RespawnGroup {
     private float delay = 0;
     private int amount = 0;
     private boolean random = true;
+    private boolean frozen = false;
 
     private int timer;
 
@@ -41,6 +42,7 @@ public class RespawnGroup {
         this.random = random;
         this.amount = amount;
         this.timer = MathHelper.floor(delay * 20);
+        this.frozen = frozen;
 
         this.worlds = source.worlds;
         this.positions = source.positions;
@@ -99,6 +101,7 @@ public class RespawnGroup {
         this.tag = tag;
         delay = nbt.getFloat("delay");
         if(nbt.getKeys().contains("random")) random = nbt.getBoolean("random");
+        if(nbt.getKeys().contains("frozen")) random = nbt.getBoolean("frozen");
         amount = nbt.getInt("amount");
 
 
@@ -122,6 +125,7 @@ public class RespawnGroup {
 
         data.putFloat("delay", delay);
         data.putBoolean("random", random);
+        data.putBoolean("frozen", frozen);
         data.putInt("amount", amount);
 
         NbtList spawnDatas = new NbtList();
@@ -167,6 +171,8 @@ public class RespawnGroup {
     }
 
     public void tick(MinecraftServer server) {
+        if(frozen) return;
+
         for(int index = 0; index < spawnedEntities.size(); index++) {
             Entity entity = getEntity(spawnedEntities.get(index), server);
 
@@ -242,5 +248,13 @@ public class RespawnGroup {
 
     public String getTag() {
         return tag;
+    }
+
+    public void freeze() {
+        frozen = true;
+    }
+
+    public void unfreeze() {
+        frozen = false;
     }
 }
