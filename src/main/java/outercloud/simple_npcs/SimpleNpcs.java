@@ -625,7 +625,7 @@ public class SimpleNpcs implements ModInitializer {
 						.then(CommandManager.literal("unfreeze")
 								.then(CommandManager.literal("all").executes(context -> {
 									for(RespawnGroup respawnGroup : getPersistentState(context).respawnGroups.values()){
-										respawnGroup.freeze();
+										respawnGroup.unfreeze();
 									}
 
 									context.getSource().sendFeedback(() -> Text.of("Unfroze all respawn groups!"), false);
@@ -643,7 +643,7 @@ public class SimpleNpcs implements ModInitializer {
 												return -1;
 											}
 
-											getPersistentState(context).respawnGroups.get(tag).freeze();
+											getPersistentState(context).respawnGroups.get(tag).unfreeze();
 
 											context.getSource().sendFeedback(() -> Text.of("Unfroze respawn group!"), false);
 
