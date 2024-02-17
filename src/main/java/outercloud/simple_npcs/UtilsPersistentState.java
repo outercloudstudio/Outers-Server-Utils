@@ -24,13 +24,13 @@ public class UtilsPersistentState extends PersistentState {
         return nbt;
     }
 
-    public static UtilsPersistentState createFromNbt(NbtCompound nbt) {
+    public static UtilsPersistentState createFromNbt(NbtCompound nbt, MinecraftServer server) {
         UtilsPersistentState state = new UtilsPersistentState();
 
         NbtCompound respawnGroupsData = nbt.getCompound("respawnGroups");
 
         for(String tag : respawnGroupsData.getKeys()) {
-            state.respawnGroups.put(tag, new RespawnGroup(tag, respawnGroupsData.getCompound(tag)));
+            state.respawnGroups.put(tag, new RespawnGroup(tag, respawnGroupsData.getCompound(tag), server));
         }
 
         return state;
@@ -39,7 +39,7 @@ public class UtilsPersistentState extends PersistentState {
     public static UtilsPersistentState getServerState(MinecraftServer server) {
         PersistentStateManager persistentStateManager = server.getWorld(World.OVERWORLD).getPersistentStateManager();
 
-        UtilsPersistentState state = persistentStateManager.getOrCreate(UtilsPersistentState::createFromNbt, UtilsPersistentState::new, "ocsudl");
+        UtilsPersistentState state = persistentStateManager.getOrCreate((nbt) -> UtilsPersistentState.createFromNbt(nbt, server), UtilsPersistentState::new, "ocsudl");
 
         state.markDirty();
 
