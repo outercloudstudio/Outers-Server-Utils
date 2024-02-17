@@ -25,6 +25,7 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
+import org.apache.logging.log4j.core.jmx.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,12 +44,7 @@ public class SimpleNpcs implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(this::tick);
 
 		ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
-			if(!entity.getCommandTags().contains("selected")) return;
-
-			if(!selectedEntities.contains(entity)) return;
-
-			selectedEntities.remove(entity);
-			entity.removeScoreboardTag("selected");
+			handleSelectedUnloadingEntity(entity);
 		});
 	}
 
@@ -56,6 +52,15 @@ public class SimpleNpcs implements ModInitializer {
 	private ServerWorld selectWorld;
 	private Vec3d selectBoxStart;
 	private Vec3d selectBoxEnd;
+
+	private void handleSelectedUnloadingEntity(Entity entity) {
+		if(!entity.getCommandTags().contains("selected")) return;
+
+		if(!selectedEntities.contains(entity)) return;
+
+		selectedEntities.remove(entity);
+		entity.removeScoreboardTag("selected");
+	}
 
 	private void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
 		dispatcher.register(
@@ -352,11 +357,51 @@ public class SimpleNpcs implements ModInitializer {
 								.then(CommandManager.argument("tag", StringArgumentType.word())
 										.suggests((context, builder) -> CommandSource.suggestMatching(getTags(context), builder))
 										.then(CommandManager.argument("delay", FloatArgumentType.floatArg(0))
-												.then(CommandManager.literal("random")
+												.then(CommandManager.argument("radius", FloatArgumentType.floatArg(0))
+														.then(CommandManager.literal("random")
+																.then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
+																		.executes(context -> {
+																			String tag = StringArgumentType.getString(context, "tag");
+																			float delay = FloatArgumentType.getFloat(context, "delay");
+																			int amount = IntegerArgumentType.getInteger(context, "amount");
+																			float radius = FloatArgumentType.getFloat(context, "radius");
+
+																			if(getPersistentState(context).respawnGroups.containsKey(tag)) {
+																				context.getSource().sendError(Text.of("A respawn group with that tag already exists!"));
+
+																				return -1;
+																			}
+
+																			getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, true, amount, radius, context.getSource().getServer()));
+
+																			context.getSource().sendFeedback(() -> Text.of("Created respawn group!"), false);
+
+																			return Command.SINGLE_SUCCESS;
+																		})
+																)
+																.executes(context -> {
+																	String tag = StringArgumentType.getString(context, "tag");
+																	float delay = FloatArgumentType.getFloat(context, "delay");
+																	float radius = FloatArgumentType.getFloat(context, "radius");
+
+																	if(getPersistentState(context).respawnGroups.containsKey(tag)) {
+																		context.getSource().sendError(Text.of("A respawn group with that tag already exists!"));
+
+																		return -1;
+																	}
+
+																	getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, true, 0, radius, context.getSource().getServer()));
+
+																	context.getSource().sendFeedback(() -> Text.of("Created respawn group!"), false);
+
+																	return Command.SINGLE_SUCCESS;
+																})
+														)
 														.then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
 																.executes(context -> {
 																	String tag = StringArgumentType.getString(context, "tag");
 																	float delay = FloatArgumentType.getFloat(context, "delay");
+																	float radius = FloatArgumentType.getFloat(context, "radius");
 																	int amount = IntegerArgumentType.getInteger(context, "amount");
 
 																	if(getPersistentState(context).respawnGroups.containsKey(tag)) {
@@ -365,7 +410,7 @@ public class SimpleNpcs implements ModInitializer {
 																		return -1;
 																	}
 
-																	getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, true, amount, context.getSource().getServer()));
+																	getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, false, amount, radius, context.getSource().getServer()));
 
 																	context.getSource().sendFeedback(() -> Text.of("Created respawn group!"), false);
 
@@ -375,6 +420,7 @@ public class SimpleNpcs implements ModInitializer {
 														.executes(context -> {
 															String tag = StringArgumentType.getString(context, "tag");
 															float delay = FloatArgumentType.getFloat(context, "delay");
+															float radius = FloatArgumentType.getFloat(context, "radius");
 
 															if(getPersistentState(context).respawnGroups.containsKey(tag)) {
 																context.getSource().sendError(Text.of("A respawn group with that tag already exists!"));
@@ -382,26 +428,7 @@ public class SimpleNpcs implements ModInitializer {
 																return -1;
 															}
 
-															getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, true, 0, context.getSource().getServer()));
-
-															context.getSource().sendFeedback(() -> Text.of("Created respawn group!"), false);
-
-															return Command.SINGLE_SUCCESS;
-														})
-												)
-												.then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
-														.executes(context -> {
-															String tag = StringArgumentType.getString(context, "tag");
-															float delay = FloatArgumentType.getFloat(context, "delay");
-															int amount = IntegerArgumentType.getInteger(context, "amount");
-
-															if(getPersistentState(context).respawnGroups.containsKey(tag)) {
-																context.getSource().sendError(Text.of("A respawn group with that tag already exists!"));
-
-																return -1;
-															}
-
-															getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, false, amount, context.getSource().getServer()));
+															getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, false, 0, radius, context.getSource().getServer()));
 
 															context.getSource().sendFeedback(() -> Text.of("Created respawn group!"), false);
 
@@ -418,12 +445,13 @@ public class SimpleNpcs implements ModInitializer {
 														return -1;
 													}
 
-													getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, false, 0, context.getSource().getServer()));
+													getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, false, 0, 0, context.getSource().getServer()));
 
 													context.getSource().sendFeedback(() -> Text.of("Created respawn group!"), false);
 
 													return Command.SINGLE_SUCCESS;
-												}))
+												})
+										)
 										.executes(context -> {
 											String tag = StringArgumentType.getString(context, "tag");
 
@@ -433,7 +461,7 @@ public class SimpleNpcs implements ModInitializer {
 												return -1;
 											}
 
-											getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, 0, false, 0, context.getSource().getServer()));
+											getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, 0, false, 0, 0, context.getSource().getServer()));
 
 											context.getSource().sendFeedback(() -> Text.of("Created respawn group!"), false);
 
@@ -443,12 +471,51 @@ public class SimpleNpcs implements ModInitializer {
 								.then(CommandManager.argument("tag", StringArgumentType.word())
 										.suggests((context, builder) -> CommandSource.suggestMatching(getPersistentState(context).respawnGroups.keySet(), builder))
 										.then(CommandManager.argument("delay", FloatArgumentType.floatArg(0))
-												.then(CommandManager.literal("random")
+												.then(CommandManager.argument("radius", FloatArgumentType.floatArg(0))
+														.then(CommandManager.literal("random")
+																.then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
+																		.executes(context -> {
+																			String tag = StringArgumentType.getString(context, "tag");
+																			float delay = FloatArgumentType.getFloat(context, "delay");
+																			int amount = IntegerArgumentType.getInteger(context, "amount");
+																			float radius = FloatArgumentType.getFloat(context, "radius");
+
+																			if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
+																				context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
+
+																				return -1;
+																			}
+
+																			getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, true, amount, radius, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
+
+																			context.getSource().sendFeedback(() -> Text.of("Edited respawn group!"), false);
+
+																			return Command.SINGLE_SUCCESS;
+																		})
+																)
+																.executes(context -> {
+																	String tag = StringArgumentType.getString(context, "tag");
+																	float delay = FloatArgumentType.getFloat(context, "delay");
+																	float radius = FloatArgumentType.getFloat(context, "radius");
+
+																	if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
+																		context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
+
+																		return -1;
+																	}
+																	getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, true, 0, radius, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
+
+																	context.getSource().sendFeedback(() -> Text.of("Edited respawn group!"), false);
+
+																	return Command.SINGLE_SUCCESS;
+																})
+														)
 														.then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
 																.executes(context -> {
 																	String tag = StringArgumentType.getString(context, "tag");
 																	float delay = FloatArgumentType.getFloat(context, "delay");
 																	int amount = IntegerArgumentType.getInteger(context, "amount");
+																	float radius = FloatArgumentType.getFloat(context, "radius");
 
 																	if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
 																		context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
@@ -456,7 +523,7 @@ public class SimpleNpcs implements ModInitializer {
 																		return -1;
 																	}
 
-																	getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, true, amount, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
+																	getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, false, amount, radius, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
 
 																	context.getSource().sendFeedback(() -> Text.of("Edited respawn group!"), false);
 
@@ -466,32 +533,14 @@ public class SimpleNpcs implements ModInitializer {
 														.executes(context -> {
 															String tag = StringArgumentType.getString(context, "tag");
 															float delay = FloatArgumentType.getFloat(context, "delay");
+															float radius = FloatArgumentType.getFloat(context, "radius");
 
 															if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
 																context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
 
 																return -1;
 															}
-															getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, true, 0, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
-
-															context.getSource().sendFeedback(() -> Text.of("Edited respawn group!"), false);
-
-															return Command.SINGLE_SUCCESS;
-														})
-												)
-												.then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
-														.executes(context -> {
-															String tag = StringArgumentType.getString(context, "tag");
-															float delay = FloatArgumentType.getFloat(context, "delay");
-															int amount = IntegerArgumentType.getInteger(context, "amount");
-
-															if(!getPersistentState(context).respawnGroups.containsKey(tag)) {
-																context.getSource().sendError(Text.of("No respawn group with that tag exists!"));
-
-																return -1;
-															}
-
-															getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, false, amount, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
+															getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, false, 0, radius, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
 
 															context.getSource().sendFeedback(() -> Text.of("Edited respawn group!"), false);
 
@@ -507,7 +556,7 @@ public class SimpleNpcs implements ModInitializer {
 
 														return -1;
 													}
-													getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, false, 0, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
+													getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, delay, false, 0, 0, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
 
 													context.getSource().sendFeedback(() -> Text.of("Edited respawn group!"), false);
 
@@ -523,7 +572,7 @@ public class SimpleNpcs implements ModInitializer {
 												return -1;
 											}
 
-											getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, 0, false, 0, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
+											getPersistentState(context).respawnGroups.put(tag, new RespawnGroup(tag, 0, false, 0, 0, context.getSource().getServer(), getPersistentState(context).respawnGroups.get(tag)));
 
 											context.getSource().sendFeedback(() -> Text.of("Edited respawn group!"), false);
 

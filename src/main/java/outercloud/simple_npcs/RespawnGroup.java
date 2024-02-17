@@ -11,7 +11,9 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Position;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
@@ -24,6 +26,7 @@ public class RespawnGroup {
     private float delay = 0;
     private int amount = 0;
     private boolean random = true;
+    private float radius = 10;
     private boolean frozen = false;
 
     private int timer;
@@ -33,8 +36,9 @@ public class RespawnGroup {
     private ArrayList<NbtCompound> nbts = new ArrayList<>();
 
     private ArrayList<UUID> spawnedEntities = new ArrayList<>();
+    private ArrayList<Vec3d> spawnedPositions = new ArrayList<>();
 
-    public RespawnGroup(String tag, float delay, boolean random, int amount, MinecraftServer server, RespawnGroup source) {
+    public RespawnGroup(String tag, float delay, boolean random, int amount, float radius, MinecraftServer server, RespawnGroup source) {
         source.cleanup(server);
 
         this.tag = tag;
@@ -42,32 +46,37 @@ public class RespawnGroup {
         this.random = random;
         this.amount = amount;
         this.timer = MathHelper.floor(delay * 20);
-        this.frozen = frozen;
+        this.radius = radius;
+        this.frozen = source.frozen;
 
         this.worlds = source.worlds;
         this.positions = source.positions;
         this.nbts = source.nbts;
 
         this.spawnedEntities = new ArrayList<>();
+        this.spawnedPositions = new ArrayList<>();
 
         for(int i = 0; i < source.spawnedEntities.size(); i++) {
-            spawnedEntities.add(null);
+            spawnedEntities.add(source.spawnedEntities.get(i));
+            spawnedPositions.add(source.spawnedPositions.get(i));
         }
 
         if(nbts.isEmpty()) return;
 
         while(spawnedEntities.size() < amount) {
             spawnedEntities.add(null);
+            spawnedPositions.add(null);
         }
 
         reset(server);
     }
 
-    public RespawnGroup(String tag, float delay, boolean random, int amount, MinecraftServer server) {
+    public RespawnGroup(String tag, float delay, boolean random, int amount, float radius, MinecraftServer server) {
         this.tag = tag;
         this.delay = delay;
         this.random = random;
         this.amount = amount;
+        this.radius = radius;
         this.timer = MathHelper.floor(delay * 20);
 
         for(ServerWorld world : server.getWorlds()) {
@@ -87,6 +96,7 @@ public class RespawnGroup {
                 nbts.add(nbt);
 
                 spawnedEntities.add(entity.getUuid());
+                spawnedPositions.add(entity.getPos());
             }
         }
 
@@ -94,6 +104,7 @@ public class RespawnGroup {
 
         while(spawnedEntities.size() < amount) {
             spawnedEntities.add(null);
+            spawnedPositions.add(null);
         }
     }
 
@@ -103,6 +114,7 @@ public class RespawnGroup {
         if(nbt.getKeys().contains("random")) random = nbt.getBoolean("random");
         if(nbt.getKeys().contains("frozen")) random = nbt.getBoolean("frozen");
         amount = nbt.getInt("amount");
+        if(nbt.getKeys().contains("radius")) random = nbt.getBoolean("radius");
 
 
         for(NbtElement element : nbt.getList("datas", NbtElement.COMPOUND_TYPE)) {
@@ -116,7 +128,21 @@ public class RespawnGroup {
         for(NbtElement element : nbt.getList("spawnedEntities", NbtElement.COMPOUND_TYPE)) {
             NbtCompound spawnDataNbt = (NbtCompound) element;
 
-            spawnedEntities.add(UUID.fromString(spawnDataNbt.getString("id")));
+            String uuidString = spawnDataNbt.getString("id");
+
+            if(!uuidString.equals("null")) {
+                spawnedEntities.add(UUID.fromString(uuidString));
+            } else {
+                spawnedEntities.add(null);
+            }
+
+            NbtCompound position = spawnDataNbt.getCompound("position");
+
+            if(position == null) {
+                spawnedPositions.add(null);
+            } else {
+                spawnedPositions.add(new Vec3d(position.getFloat("x"), position.getFloat("y"), position.getFloat("z")));
+            }
         }
     }
 
@@ -127,6 +153,7 @@ public class RespawnGroup {
         data.putBoolean("random", random);
         data.putBoolean("frozen", frozen);
         data.putInt("amount", amount);
+        data.putFloat("radius", radius);
 
         NbtList spawnDatas = new NbtList();
 
@@ -147,9 +174,26 @@ public class RespawnGroup {
 
         NbtList spawnedEntitiesData = new NbtList();
 
-        for(UUID uuid : spawnedEntities){
+        for(int i = 0; i < spawnedEntities.size(); i++){
+            UUID uuid = spawnedEntities.get(i);
+            Vec3d position = spawnedPositions.get(i);
+
             NbtCompound spawnedEntityData = new NbtCompound();
-            spawnedEntityData.putString("id", uuid.toString());
+
+            if(uuid != null) {
+                spawnedEntityData.putString("id", uuid.toString());
+            } else {
+                spawnedEntityData.putString("id", "null");
+            }
+
+            if(position != null) {
+                NbtCompound positionCompound = new NbtCompound();
+                positionCompound.putFloat("x", (float) position.x);
+                positionCompound.putFloat("y", (float) position.y);
+                positionCompound.putFloat("z", (float) position.z);
+
+                spawnedEntityData.put("position", positionCompound);
+            }
 
             spawnedEntitiesData.add(spawnedEntityData);
         }
@@ -176,33 +220,19 @@ public class RespawnGroup {
         for(int index = 0; index < spawnedEntities.size(); index++) {
             Entity entity = getEntity(spawnedEntities.get(index), server);
 
-            if(entity == null || entity.isAlive()) continue;
+            Vec3d position = Vec3d.ZERO;
+
+            if(index < positions.size()) position = positions.get(index);
+
+            if(radius != 0 && entity != null && entity.isAlive() && entity.getPos().distanceTo(position) > radius) entity.teleport(position.x, position.y, position.z);
+
+            if(entity != null && entity.isAlive()) continue;
 
             timer--;
 
             if(timer > 0) break;
 
-            Random randomGenerator = new Random();
-
-            int spawnDataIndex = index;
-
-            if(random || index >= nbts.size()) spawnDataIndex = randomGenerator.nextInt(nbts.size());
-
-            ServerWorld world = server.getWorld(worlds.get(spawnDataIndex));
-            Vec3d position = positions.get(spawnDataIndex);
-            NbtCompound nbt = nbts.get(spawnDataIndex);
-
-            Entity newEntity = EntityType.loadEntityWithPassengers(nbt, world, (createdEntity) -> {
-                createdEntity.refreshPositionAndAngles(position.x, position.y, position.z, createdEntity.getYaw(), createdEntity.getPitch());
-
-                return createdEntity;
-            });
-
-            if(newEntity == null) continue;
-
-            world.spawnNewEntityAndPassengers(newEntity);
-
-            spawnedEntities.set(index, newEntity.getUuid());
+            this.spawnEntity(index, server);
         }
 
         if(timer <= 0) timer = MathHelper.floor(delay * 20);
@@ -214,28 +244,40 @@ public class RespawnGroup {
 
             if(entity != null && entity.isAlive()) entity.discard();
 
-            Random randomGenerator = new Random();
-
-            int spawnDataIndex = index;
-
-            if(random || index >= nbts.size()) spawnDataIndex = randomGenerator.nextInt(nbts.size());
-
-            ServerWorld world = server.getWorld(worlds.get(spawnDataIndex));
-            Vec3d position = positions.get(spawnDataIndex);
-            NbtCompound nbt = nbts.get(spawnDataIndex);
-
-            Entity newEntity = EntityType.loadEntityWithPassengers(nbt, world, (createdEntity) -> {
-                createdEntity.refreshPositionAndAngles(position.x, position.y, position.z, createdEntity.getYaw(), createdEntity.getPitch());
-
-                return createdEntity;
-            });
-
-            world.spawnNewEntityAndPassengers(newEntity);
-
-            spawnedEntities.set(index, newEntity.getUuid());
+            this.spawnEntity(index, server);
         }
 
         timer = MathHelper.floor(delay * 20);
+    }
+
+    private void spawnEntity(int index, MinecraftServer server) {
+        Random randomGenerator = new Random();
+
+        int spawnDataIndex = index;
+
+        if(random || index >= nbts.size()) spawnDataIndex = randomGenerator.nextInt(nbts.size());
+
+        ServerWorld world = server.getWorld(worlds.get(spawnDataIndex));
+        Vec3d position = positions.get(spawnDataIndex);
+        NbtCompound nbt = nbts.get(spawnDataIndex);
+
+        if(world == null) return;
+
+        if(!world.isChunkLoaded(ChunkSectionPos.getSectionCoord(position.x), ChunkSectionPos.getSectionCoord(position.z))) return;
+
+        Entity newEntity = EntityType.loadEntityWithPassengers(nbt, world, (createdEntity) -> {
+            createdEntity.refreshPositionAndAngles(position.x, position.y, position.z, createdEntity.getYaw(), createdEntity.getPitch());
+
+            return createdEntity;
+        });
+
+        if(newEntity == null) return;
+
+        world.spawnNewEntityAndPassengers(newEntity);
+
+        spawnedEntities.set(index, newEntity.getUuid());
+
+        if(positions.size() < nbts.size()) positions.add(newEntity.getPos());
     }
 
     public void cleanup(MinecraftServer server) {
