@@ -45,10 +45,13 @@ public class RespawnGroup {
     private ArrayList<SpawnEntry> spawnEntries = new ArrayList<>();
 
     private Random randomGenerator = new Random();
+    private static MinecraftServer server;
 
     // Creates a respawn group from another respawn group. Used for editing respawn groups
     public RespawnGroup(String tag, float delay, boolean random, int amount, float radius, MinecraftServer server, RespawnGroup source) {
         source.cleanup();
+
+        RespawnGroup.server = server;
 
         this.tag = tag;
         this.delay = delay;
@@ -63,17 +66,19 @@ public class RespawnGroup {
 
         if(amount == 0) amount = respawnEntries.size();
 
-        populateRespawnEntries(server);
+        populateRespawnEntries();
 
         while(spawnEntries.size() < amount) {
             spawnEntries.add(null);
         }
 
-        reset(server);
+        reset();
     }
 
     // Creates a respawn group using entities with a given tag
     public RespawnGroup(String tag, float delay, boolean random, int amount, float radius, MinecraftServer server) {
+        RespawnGroup.server = server;
+
         this.tag = tag;
         this.delay = delay;
         this.random = random;
@@ -83,7 +88,7 @@ public class RespawnGroup {
 
         if(amount == 0) amount = respawnEntries.size();
 
-        populateRespawnEntries(server);
+        populateRespawnEntries();
 
         while(spawnEntries.size() < amount) {
             spawnEntries.add(null);
@@ -92,6 +97,8 @@ public class RespawnGroup {
 
     // Creates a respawn group from NBT save data
     public RespawnGroup(String tag, NbtCompound nbt, MinecraftServer server) {
+        RespawnGroup.server = server;
+
         this.tag = tag;
         delay = nbt.getFloat("delay");
         if(nbt.getKeys().contains("random")) random = nbt.getBoolean("random");
@@ -146,7 +153,7 @@ public class RespawnGroup {
         nbt.put(tag, data);
     }
 
-    public void tick(MinecraftServer server) {
+    public void tick() {
         if(frozen) return;
 
         timer--;
@@ -176,7 +183,7 @@ public class RespawnGroup {
                 if(!spawnEntry.respawnEntry.world.isChunkLoaded(ChunkSectionPos.getSectionCoord(spawnEntry.entity.getPos().x), ChunkSectionPos.getSectionCoord(spawnEntry.entity.getPos().z))) continue;
             }
 
-            spawnEntity(index, server);
+            spawnEntity(index);
         }
 
         timer = MathHelper.floor(delay * 20);
@@ -194,17 +201,17 @@ public class RespawnGroup {
         }
     }
 
-    public void reset(MinecraftServer server) {
+    public void reset() {
         this.cleanup();
 
         for(int index = 0; index < amount; index++) {
-            spawnEntity(index, server);
+            spawnEntity(index);
         }
 
         timer = MathHelper.floor(delay * 20);
     }
 
-    private void populateRespawnEntries(MinecraftServer server) {
+    private void populateRespawnEntries() {
         for(ServerWorld world : server.getWorlds()) {
             for(Entity entity : world.iterateEntities()) {
                 if(!entity.getCommandTags().contains(tag)) continue;
@@ -225,7 +232,7 @@ public class RespawnGroup {
         }
     }
 
-    private void spawnEntity(int index, MinecraftServer server) {
+    private void spawnEntity(int index) {
         RespawnEntry respawnEntry;
 
         if(random) {
@@ -269,5 +276,21 @@ public class RespawnGroup {
 
     public void unfreeze() {
         frozen = false;
+    }
+
+    public boolean containsEntity(Entity entity) {
+        for(SpawnEntry spawnEntry: spawnEntries) {
+            if(spawnEntry.entity == entity) return true;
+        }
+
+        return false;
+    }
+
+    public static boolean entityInARespawnGroup(Entity entity) {
+        for(RespawnGroup respawnGroup: UtilsPersistentState.getServerState(server).respawnGroups.values()) {
+            if(respawnGroup.containsEntity(entity)) return true;
+        }
+
+        return false;
     }
 }

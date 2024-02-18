@@ -1,7 +1,6 @@
 package outercloud.simple_npcs.mixin;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.passive.CowEntity;
 import net.minecraft.server.world.ServerEntityManager;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.entity.EntityLike;
@@ -12,7 +11,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import outercloud.simple_npcs.SimpleNpcs;
+import outercloud.simple_npcs.RespawnGroup;
 
 import java.util.List;
 
@@ -28,7 +27,7 @@ public class ServerEntityManagerMixin {
         List<EntityTrackingSection<EntityLike>> trackingSections = cache.getTrackingSections(chunkPos.toLong()).toList();
 
         for(EntityTrackingSection<EntityLike> trackingSection: trackingSections) {
-            List<EntityLike> entities = trackingSection.stream().filter(entityLike -> true).toList();
+            List<EntityLike> entities = trackingSection.stream().filter(entityLike -> entityLike instanceof Entity).filter(entityLike -> RespawnGroup.entityInARespawnGroup((Entity) entityLike)).toList();
 
             for(EntityLike entityLike: entities) {
                 entityLike.setRemoved(Entity.RemovalReason.DISCARDED);

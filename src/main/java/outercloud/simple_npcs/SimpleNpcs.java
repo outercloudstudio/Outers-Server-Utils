@@ -295,7 +295,7 @@ public class SimpleNpcs implements ModInitializer {
 						.then(CommandManager.literal("reset")
 								.then(CommandManager.literal("all").executes(context -> {
 									for(RespawnGroup respawnGroup : getPersistentState(context).respawnGroups.values()){
-										respawnGroup.reset(context.getSource().getServer());
+										respawnGroup.reset();
 									}
 
 									context.getSource().sendFeedback(() -> Text.of("Reset all respawn groups!"), false);
@@ -313,7 +313,7 @@ public class SimpleNpcs implements ModInitializer {
 												return -1;
 											}
 
-											getPersistentState(context).respawnGroups.get(tag).reset(context.getSource().getServer());
+											getPersistentState(context).respawnGroups.get(tag).reset();
 
 											context.getSource().sendFeedback(() -> Text.of("Reset respawn group!"), false);
 
@@ -413,7 +413,7 @@ public class SimpleNpcs implements ModInitializer {
 
 	private void tick(MinecraftServer server) {
 		for(RespawnGroup respawnGroup : UtilsPersistentState.getServerState(server).respawnGroups.values()) {
-			respawnGroup.tick(server);
+			respawnGroup.tick();
 		}
 	}
 }
