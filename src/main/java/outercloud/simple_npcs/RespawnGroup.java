@@ -233,6 +233,12 @@ public class RespawnGroup {
     }
 
     private void spawnEntity(int index) {
+        if(respawnEntries.isEmpty()) {
+            SimpleNpcs.LOGGER.warn("Respawn group \"" + tag +"\" has no respawn entries!");
+
+            return;
+        }
+
         RespawnEntry respawnEntry;
 
         if(random) {
