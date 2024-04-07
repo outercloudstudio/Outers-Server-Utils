@@ -1,33 +1,24 @@
-# Simple NPCs
-The purpose of this mob is to be able to create respawnable NPC groups or individuals. Simple NPCs is completely server sided!
+# Simple Entity Respawns
+The purpose of this mob is to be able to create respawnable groups of entities based on tags. Simple Entity Respawns is completely server sided!
 
-## Idea
-1. Summon entity and modify it to desired effect
-2. Select entity/entities
-3. Create spawn group
-4. Entities will now respawn
+## Tutorial
+First create a respawn group by running the command `/respawns create my_respawn_group 1 5`. This command will create a respawn group linked to the tag `my_respawn_group` with a delay of `1` second and radius of `5`.
 
-## Technical
-NPCs are saved using NBT so anything that works with NBT should work with this mod.
-
-Groups are based off of tags so the `/tag` command can be used to completely skip using the `/select` command.
+> [!IMPORTANT]  
+> Create the respawn group before adding entities to the group!
 
 ## Commands
-`/respawn` allows the creation, deletion, and modification of entity respawn groups.
+### `/respawns create <tag: string> <delay: float> <radius: float>`
+Creates a group assigned to a specific tag. `delay` is a float is seconds. Entities wait this amount of time before respawning. `radius` is a float in blocks. Entities that travel farther than this distance from when they were given the tag will be teleported back to their original spot.
 
-`/respawn create` allows you to specify a tag. All entities with that tag will be assigned to the respawn group. You can specify the delay in seconds between killing an entity before it respawns, and the max amount of entities that will be spawned at any one time. You can also specify if groups will randomly pick from the pool or always respawn the same mobs.
+### `/respawns remove <tag: string>`
+Removes the respawn group assigned to the tag.
 
-`/respawn remove` lets you remove the specified respawn group.
+### `/respawns edit <tag: string> <delay: float> <radius: float>`
+Modifies the attributes of the respawn group. Parameters are the same as `create`.
 
-`/respawn edit` lets you modify the delay and amount of entities in the specified respawn group.
-
-`/respawn list` lists out the names of the currently existing respawn groups
-
-`/respawn reset` respawns all the entities in a respawn group, or all respawn groups without dropping any loot
-
-`/respawn freeze` prevents entities in a respawn group or all respawn groups from spawning.
-
-`/respawn unfreeze` unfreezes all or a specific respawn group.
+### `/respawns list`
+Lists out the tags of the currently existing respawn groups.
 
 # Download
 Modrinth:
