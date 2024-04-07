@@ -1,9 +1,9 @@
 {
 	"schemaVersion": 1,
-	"id": "simple_npcs",
+	"id": "simple_entity_respawns",
 	"version": "${version}",
-	"name": "BlueCloud Simple NPCs",
-	"description": "A mod that helps making basic NPCs that respawn!",
+	"name": "Simple Entity Respawns",
+	"description": "A mod that adds respawning entities!",
 	"authors": [
 		"Outer Cloud"
 	],
@@ -19,11 +19,11 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"outercloud.simple_npcs.SimpleNpcs"
+			"outercloud.simple_entity_respawns.SimpleEntityRespawns"
 		]
 	},
 	"mixins": [
-		"simple_npcs.mixins.json"
+      "simple_entity_respawns.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.14.22",

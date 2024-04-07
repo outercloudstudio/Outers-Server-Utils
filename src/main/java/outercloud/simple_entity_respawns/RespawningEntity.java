@@ -1,4 +1,4 @@
-package outercloud.simple_npcs;
+package outercloud.simple_entity_respawns;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -8,7 +8,7 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
-import outercloud.simple_npcs.bridge.EntityMixinBridge;
+import outercloud.simple_entity_respawns.bridge.EntityMixinBridge;
 
 public class RespawningEntity {
     public NbtCompound nbt;

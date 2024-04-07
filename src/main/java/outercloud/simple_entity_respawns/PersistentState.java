@@ -1,4 +1,4 @@
-package outercloud.simple_npcs;
+package outercloud.simple_entity_respawns;
 
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.MinecraftServer;
@@ -38,7 +38,7 @@ public class PersistentState extends net.minecraft.world.PersistentState {
     public static PersistentState getServerState(MinecraftServer server) {
         PersistentStateManager persistentStateManager = server.getWorld(World.OVERWORLD).getPersistentStateManager();
 
-        PersistentState state = persistentStateManager.getOrCreate((NbtCompound nbt) -> PersistentState.createFromNbt(nbt, server), PersistentState::new, "simple_npcs");
+        PersistentState state = persistentStateManager.getOrCreate((NbtCompound nbt) -> PersistentState.createFromNbt(nbt, server), PersistentState::new, "simple_entity_respawns");
 
         state.markDirty();
 

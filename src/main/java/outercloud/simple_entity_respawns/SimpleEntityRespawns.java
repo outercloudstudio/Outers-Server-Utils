@@ -1,4 +1,4 @@
-package outercloud.simple_npcs;
+package outercloud.simple_entity_respawns;
 
 import com.google.common.collect.Sets;
 import com.mojang.brigadier.Command;
@@ -22,8 +22,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
-public class SimpleNpcs implements ModInitializer {
-    public static final Logger LOGGER = LoggerFactory.getLogger("simple_npcs");
+public class SimpleEntityRespawns implements ModInitializer {
+    public static final Logger LOGGER = LoggerFactory.getLogger("simple_entity_respawns");
 
 	@Override
 	public void onInitialize() {
@@ -34,7 +34,7 @@ public class SimpleNpcs implements ModInitializer {
 
 	private void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
 		dispatcher.register(
-				CommandManager.literal("respawn")
+				CommandManager.literal("respawns")
 						.requires(source -> source.hasPermissionLevel(4))
 						.then(CommandManager.literal("create")
 								.then(CommandManager.argument("tag", StringArgumentType.word())

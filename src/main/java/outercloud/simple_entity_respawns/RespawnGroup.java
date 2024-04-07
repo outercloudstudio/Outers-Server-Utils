@@ -1,24 +1,14 @@
-package outercloud.simple_npcs;
+package outercloud.simple_entity_respawns;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import outercloud.simple_npcs.bridge.EntityMixinBridge;
+import outercloud.simple_entity_respawns.bridge.EntityMixinBridge;
 
 import java.util.ArrayList;
-import java.util.Random;
-import java.util.logging.Logger;
 
 public class RespawnGroup {
     public float delay = 0;

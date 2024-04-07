@@ -1,4 +1,4 @@
-package outercloud.simple_npcs.bridge;
+package outercloud.simple_entity_respawns.bridge;
 
 import net.minecraft.nbt.NbtCompound;
 

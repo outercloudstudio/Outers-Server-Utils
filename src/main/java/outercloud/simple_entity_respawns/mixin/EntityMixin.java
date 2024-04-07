@@ -1,20 +1,17 @@
-package outercloud.simple_npcs.mixin;
+package outercloud.simple_entity_respawns.mixin;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.math.Vec3d;
-import org.slf4j.Logger;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import outercloud.simple_npcs.RespawnGroup;
-import outercloud.simple_npcs.SimpleNpcs;
-import outercloud.simple_npcs.bridge.EntityMixinBridge;
+import outercloud.simple_entity_respawns.RespawnGroup;
+import outercloud.simple_entity_respawns.SimpleEntityRespawns;
+import outercloud.simple_entity_respawns.bridge.EntityMixinBridge;
 
 @Mixin(Entity.class)
 public abstract class EntityMixin implements EntityMixinBridge {
@@ -31,7 +28,7 @@ public abstract class EntityMixin implements EntityMixinBridge {
 
         if(((Entity) (Object) this).getCommandTags().size() >= 1024) return; // Return if adding the tag would fail
 
-        if(SimpleNpcs.getRespawnGroup(me) != null) return; // Return if we are already in a respawn group
+        if(SimpleEntityRespawns.getRespawnGroup(me) != null) return; // Return if we are already in a respawn group
 
         addingTag = true;
     }
@@ -59,7 +56,7 @@ public abstract class EntityMixin implements EntityMixinBridge {
 
         if(me.getWorld().isClient) return;
 
-        RespawnGroup respawnGroup = SimpleNpcs.getRespawnGroup(me);
+        RespawnGroup respawnGroup = SimpleEntityRespawns.getRespawnGroup(me);
 
         if(respawnGroup == null) return;
 
