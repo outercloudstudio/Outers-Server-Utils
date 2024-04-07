@@ -3,8 +3,8 @@
 	"package": "outercloud.simple_npcs.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"mixins": [
-		"ServerEntityManagerMixin",
-		"ServerEntityManagerAccessorMixin"
+		"EntityMixin",
+		"LivingEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

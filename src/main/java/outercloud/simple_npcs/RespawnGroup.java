@@ -14,289 +14,67 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import outercloud.simple_npcs.bridge.EntityMixinBridge;
 
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.UUID;
+import java.util.logging.Logger;
 
 public class RespawnGroup {
-    private class RespawnEntry {
-        public ServerWorld world;
-        public Vec3d position;
-        public NbtCompound nbt;
-    }
+    public float delay = 0;
+    public float radius = 10;
 
-    private class SpawnEntry {
-        public Entity entity;
-        public RespawnEntry respawnEntry;
-    }
+    public ArrayList<RespawningEntity> respawningEntities = new ArrayList<>();
 
-    private String tag = "none";
-    private float delay = 0;
-    private int amount = 0;
-    private boolean random = true;
-    private float radius = 10;
-    private boolean frozen = false;
-
-    private int timer;
-
-    private ArrayList<RespawnEntry> respawnEntries = new ArrayList<>();
-    private ArrayList<SpawnEntry> spawnEntries = new ArrayList<>();
-
-    private Random randomGenerator = new Random();
-    private static MinecraftServer server;
-
-    // Creates a respawn group from another respawn group. Used for editing respawn groups
-    public RespawnGroup(String tag, float delay, boolean random, int amount, float radius, MinecraftServer server, RespawnGroup source) {
-        source.cleanup();
-
-        RespawnGroup.server = server;
-
-        this.tag = tag;
+    public RespawnGroup(float delay, float radius) {
         this.delay = delay;
-        this.random = random;
-        this.amount = amount;
         this.radius = radius;
-        this.timer = MathHelper.floor(delay * 20);
-
-        this.frozen = source.frozen;
-
-        this.respawnEntries = source.respawnEntries;
-
-        if(amount == 0) amount = respawnEntries.size();
-
-        populateRespawnEntries();
-
-        while(spawnEntries.size() < amount) {
-            spawnEntries.add(null);
-        }
-
-        reset();
     }
 
-    // Creates a respawn group using entities with a given tag
-    public RespawnGroup(String tag, float delay, boolean random, int amount, float radius, MinecraftServer server) {
-        RespawnGroup.server = server;
-
-        this.tag = tag;
-        this.delay = delay;
-        this.random = random;
-        this.amount = amount;
-        this.radius = radius;
-        this.timer = MathHelper.floor(delay * 20);
-
-        if(amount == 0) amount = respawnEntries.size();
-
-        populateRespawnEntries();
-
-        while(spawnEntries.size() < amount) {
-            spawnEntries.add(null);
-        }
-    }
-
-    // Creates a respawn group from NBT save data
-    public RespawnGroup(String tag, NbtCompound nbt, MinecraftServer server) {
-        RespawnGroup.server = server;
-
-        this.tag = tag;
+    public RespawnGroup(NbtCompound nbt, MinecraftServer server) {
         delay = nbt.getFloat("delay");
-        if(nbt.getKeys().contains("random")) random = nbt.getBoolean("random");
-        if(nbt.getKeys().contains("frozen")) random = nbt.getBoolean("frozen");
-        amount = nbt.getInt("amount");
-        if(nbt.getKeys().contains("radius")) random = nbt.getBoolean("radius");
+        radius = nbt.getFloat("radius");
 
-        for(NbtElement element : nbt.getList("datas", NbtElement.COMPOUND_TYPE)) {
-            NbtCompound spawnDataNbt = (NbtCompound) element;
-
-            RespawnEntry respawnEntry = new RespawnEntry();
-            respawnEntry.position = new Vec3d(spawnDataNbt.getFloat("x"), spawnDataNbt.getFloat("y"), spawnDataNbt.getFloat("z"));
-            respawnEntry.world = server.getWorld(RegistryKey.of(RegistryKeys.WORLD, new Identifier(spawnDataNbt.getString("world"))));
-            respawnEntry.nbt = (NbtCompound) spawnDataNbt.get("data");
-
-            respawnEntries.add(respawnEntry);
-        }
-
-        if(amount == 0) amount = respawnEntries.size();
-
-        while(spawnEntries.size() < amount) {
-            spawnEntries.add(null);
+        for(NbtElement nbtElement: nbt.getList("entities", NbtElement.COMPOUND_TYPE)) {
+            respawningEntities.add(new RespawningEntity((NbtCompound) nbtElement, server));
         }
     }
 
-    public void writeNbt(NbtCompound nbt) {
-        NbtCompound data = new NbtCompound();
+    public NbtCompound writeNbt() {
+        NbtCompound nbt = new NbtCompound();
 
-        data.putFloat("delay", delay);
-        data.putBoolean("random", random);
-        data.putBoolean("frozen", frozen);
-        data.putInt("amount", amount);
-        data.putFloat("radius", radius);
+        nbt.putFloat("delay", delay);
+        nbt.putFloat("radius", radius);
 
-        NbtList spawnDatas = new NbtList();
+        NbtList entities = new NbtList();
 
-        for (RespawnEntry respawnEntry : respawnEntries) {
-            NbtCompound spawnData = new NbtCompound();
-            spawnData.putFloat("x", (float) respawnEntry.position.x);
-            spawnData.putFloat("y", (float) respawnEntry.position.y);
-            spawnData.putFloat("z", (float) respawnEntry.position.z);
-
-            spawnData.putString("world", respawnEntry.world.getRegistryKey().getValue().toString());
-
-            spawnData.put("data", respawnEntry.nbt);
-
-            spawnDatas.add(spawnData);
+        for(RespawningEntity entity: respawningEntities) {
+            entities.add(entity.writeNbt());
         }
 
-        data.put("datas", spawnDatas);
+        nbt.put("entities", entities);
 
-        nbt.put(tag, data);
+        return nbt;
     }
 
     public void tick() {
-        if(frozen) return;
+        for(int index = 0; index < respawningEntities.size(); index++) {
+            RespawningEntity entity = respawningEntities.get(index);
 
-        timer--;
+            entity.delay -= 1f / 20f;
 
-        if(radius > 0) {
-            for(SpawnEntry spawnEntry: spawnEntries) {
-                if(spawnEntry == null) continue;
+            if(entity.delay > 0f) continue;
 
-                if(!spawnEntry.entity.isAlive()) continue;
+            respawningEntities.remove(index);
+            index--;
 
-                if(spawnEntry.entity.getPos().distanceTo(spawnEntry.respawnEntry.position) <= radius) continue;
+            Entity newEntity = EntityType.loadEntityWithPassengers(entity.nbt, entity.world, (createdEntity) -> createdEntity);
 
-                spawnEntry.entity.teleport(spawnEntry.respawnEntry.position.x, spawnEntry.respawnEntry.position.y, spawnEntry.respawnEntry.position.z);
-            }
+            if(newEntity == null) return;
+
+            ((EntityMixinBridge) newEntity).setInitialNbt(entity.nbt);
+
+            entity.world.spawnNewEntityAndPassengers(newEntity);
         }
-
-        if(timer > 0) return;
-
-        for(int index = 0; index < spawnEntries.size(); index++) {
-            SpawnEntry spawnEntry = spawnEntries.get(index);
-
-            //
-
-            if(spawnEntry != null) {
-                if(spawnEntry.entity.isAlive()) continue;
-
-                if(!spawnEntry.respawnEntry.world.isChunkLoaded(ChunkSectionPos.getSectionCoord(spawnEntry.entity.getPos().x), ChunkSectionPos.getSectionCoord(spawnEntry.entity.getPos().z))) continue;
-            }
-
-            spawnEntity(index);
-        }
-
-        timer = MathHelper.floor(delay * 20);
-    }
-
-    public void cleanup() {
-        for(int index = 0; index < spawnEntries.size(); index++) {
-            SpawnEntry spawnEntry = spawnEntries.get(index);
-
-            if(spawnEntry == null) continue;
-
-            spawnEntry.entity.discard();
-
-            spawnEntries.set(index, null);
-        }
-    }
-
-    public void reset() {
-        this.cleanup();
-
-        for(int index = 0; index < amount; index++) {
-            spawnEntity(index);
-        }
-
-        timer = MathHelper.floor(delay * 20);
-    }
-
-    private void populateRespawnEntries() {
-        for(ServerWorld world : server.getWorlds()) {
-            for(Entity entity : world.iterateEntities()) {
-                if(!entity.getCommandTags().contains(tag)) continue;
-
-                RespawnEntry respawnEntry = new RespawnEntry();
-                respawnEntry.world = world;
-                respawnEntry.position = entity.getPos();
-
-                NbtCompound nbt = new NbtCompound();
-                nbt.putString("id", Registries.ENTITY_TYPE.getId(entity.getType()).toString());
-                entity.writeNbt(nbt);
-                nbt.remove("UUID");
-
-                respawnEntry.nbt = nbt;
-
-                respawnEntries.add(respawnEntry);
-            }
-        }
-    }
-
-    private void spawnEntity(int index) {
-        if(respawnEntries.isEmpty()) {
-            SimpleNpcs.LOGGER.warn("Respawn group \"" + tag +"\" has no respawn entries!");
-
-            return;
-        }
-
-        RespawnEntry respawnEntry;
-
-        if(random) {
-            respawnEntry = respawnEntries.get(randomGenerator.nextInt(respawnEntries.size()));
-        } else {
-            SpawnEntry spawnEntry = spawnEntries.get(index);
-
-            if(spawnEntry == null) {
-                respawnEntry = respawnEntries.get(index % respawnEntries.size());
-            } else {
-                respawnEntry = spawnEntry.respawnEntry;
-            }
-
-        }
-
-        if(respawnEntry == null) return;
-
-        RespawnEntry finalRespawnEntry = respawnEntry;
-        Entity newEntity = EntityType.loadEntityWithPassengers(respawnEntry.nbt, respawnEntry.world, (createdEntity) -> {
-            createdEntity.refreshPositionAndAngles(finalRespawnEntry.position.x, finalRespawnEntry.position.y, finalRespawnEntry.position.z, createdEntity.getYaw(), createdEntity.getPitch());
-
-            return createdEntity;
-        });
-
-        respawnEntry.world.spawnNewEntityAndPassengers(newEntity);
-
-        SpawnEntry spawnEntry = new SpawnEntry();
-        spawnEntry.entity = newEntity;
-        spawnEntry.respawnEntry = respawnEntry;
-
-        spawnEntries.set(index, spawnEntry);
-    }
-
-    public String getTag() {
-        return tag;
-    }
-
-    public void freeze() {
-        frozen = true;
-    }
-
-    public void unfreeze() {
-        frozen = false;
-    }
-
-    public boolean containsEntity(Entity entity) {
-        for(SpawnEntry spawnEntry: spawnEntries) {
-            if(spawnEntry.entity == entity) return true;
-        }
-
-        return false;
-    }
-
-    public static boolean entityInARespawnGroup(Entity entity) {
-        for(RespawnGroup respawnGroup: UtilsPersistentState.getServerState(server).respawnGroups.values()) {
-            if(respawnGroup.containsEntity(entity)) return true;
-        }
-
-        return false;
     }
 }
