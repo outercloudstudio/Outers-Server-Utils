@@ -1,5 +1,5 @@
 # Simple Entity Respawns
-The purpose of this mob is to be able to create respawnable groups of entities based on tags. Simple Entity Respawns is completely server sided!
+The purpose of this mod is to be able to create respawnable groups of entities based on tags. Simple Entity Respawns is completely server sided!
 
 ## Tutorial
 First create a respawn group by running the command `/respawns create my_respawn_group 1 5`. This command will create a respawn group linked to the tag `my_respawn_group` with a delay of `1` second and radius of `5`.
@@ -22,7 +22,7 @@ Lists out the tags of the currently existing respawn groups.
 
 # Download
 Modrinth:
-https://modrinth.com/mod/blue-cloud-simple-npcs
+https://modrinth.com/mod/simple-entity-respawns
 
 Curseforge:
-https://legacy.curseforge.com/minecraft/mc-mods/bluecloud-simple-npcs
+https://legacy.curseforge.com/minecraft/mc-mods/simple-entity-respawns
