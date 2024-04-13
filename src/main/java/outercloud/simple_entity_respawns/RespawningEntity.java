@@ -20,6 +20,7 @@ public class RespawningEntity {
 
         if(!nbt.contains("id")) nbt.putString("id", Registries.ENTITY_TYPE.getId(entity.getType()).toString());
         if(nbt.contains("UUID")) nbt.remove("UUID");
+        if(nbt.contains("initial_nbt")) nbt.remove("initial_nbt");
 
         this.delay = delay;
         this.world = world;
@@ -34,7 +35,7 @@ public class RespawningEntity {
     public NbtCompound writeNbt() {
         NbtCompound nbt = new NbtCompound();
 
-        nbt.put("nbt", nbt);
+        nbt.put("nbt", this.nbt);
         nbt.putFloat("delay", delay);
         nbt.putString("world", world.getRegistryKey().getValue().toString());
 
